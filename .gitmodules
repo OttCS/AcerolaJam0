@@ -1,0 +1,3 @@
+[submodule "git"]
+	path = ZephyrJS
+	url = https://github.com/ZephyrStudio/ZephyrJS.git

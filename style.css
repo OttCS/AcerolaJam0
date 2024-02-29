@@ -1,0 +1,32 @@
+* {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+body {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    /* cursor: none; */
+}
+
+canvas {
+    align-self: center;
+    /* image-rendering: -webkit-optimize-contrast;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -o-pixelated;
+    image-rendering: pixelated; */
+}
+
+#editor {
+    display: none;
+    font-family: monospace;
+    background: #0000007f;
+    border: 2px solid #fff;
+    padding: 14px;
+    color: #fff;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+}
