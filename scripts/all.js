@@ -256,13 +256,51 @@ const LEVEL = {
     renderSingle(entity) {
         let data = Entity.ID[entity.id];
         if (data.renderType == VOXEL) { // Voxel
+
+            let aoIntensity = 0.5;
+
             entity.Up = new FACE.Up(data.Up || data.default);
             entity.sprite.addChild(entity.Up);
-            if (this.environment.has(entity.x, entity.y + 1, entity.z + 1)) {
-                const aoLeft = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-                aoLeft.anchor.x = aoLeft.anchor.y = 1;
-                aoLeft.rotation = Math.PI;
-                entity.Up.addChild(aoLeft);
+
+            let top = this.environment.has(entity.x + 1, entity.y + 1, entity.z + 1);
+            let left = this.environment.has(entity.x, entity.y + 1, entity.z + 1);
+            let lateralLeft = this.environment.has(entity.x - 1, entity.y + 1, entity.z + 1);
+            let right = this.environment.has(entity.x + 1, entity.y, entity.z + 1);
+            let lateralRight = this.environment.has(entity.x + 1, entity.y - 1, entity.z + 1);
+            let botLeft = this.environment.has(entity.x - 1, entity.y, entity.z + 1);
+            let botRight = this.environment.has(entity.x, entity.y - 1, entity.z + 1);
+
+            if (left || lateralLeft) {
+                const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
+                ao.anchor.x = 1;
+                ao.anchor.y = 0;
+                ao.rotation = -Math.PI / 2;
+                ao.alpha = aoIntensity;
+                entity.Up.addChild(ao);
+            }
+
+            if (right || lateralRight) {
+                const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
+                ao.anchor.x = 0;
+                ao.anchor.y = 1;
+                ao.rotation = Math.PI / 2;
+                ao.alpha = aoIntensity;
+                entity.Up.addChild(ao);
+            }
+
+            if (left || right || top) {
+                const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
+                ao.anchor.x = 1;
+                ao.anchor.y = 1;
+                ao.rotation = Math.PI;
+                ao.alpha = aoIntensity;
+                entity.Up.addChild(ao);
+            }
+
+            if (botLeft || botRight) {
+                const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
+                ao.alpha = aoIntensity;
+                entity.Up.addChild(ao);
             }
 
 
@@ -282,9 +320,8 @@ const LEVEL = {
         }
     },
     render() {
-        for (let [k, entity] of LEVEL.environment) {
+        for (let [k, entity] of LEVEL.environment)
             this.renderSingle(entity);
-        }
     },
 
     // renderEntity(entity) {
