@@ -257,51 +257,52 @@ const LEVEL = {
         let data = Entity.ID[entity.id];
         if (data.renderType == VOXEL) { // Voxel
 
-            let aoIntensity = 0.5;
-
             entity.Up = new FACE.Up(data.Up || data.default);
             entity.sprite.addChild(entity.Up);
 
-            let top = this.environment.has(entity.x + 1, entity.y + 1, entity.z + 1);
-            let left = this.environment.has(entity.x, entity.y + 1, entity.z + 1);
-            let lateralLeft = this.environment.has(entity.x - 1, entity.y + 1, entity.z + 1);
-            let right = this.environment.has(entity.x + 1, entity.y, entity.z + 1);
-            let lateralRight = this.environment.has(entity.x + 1, entity.y - 1, entity.z + 1);
-            let botLeft = this.environment.has(entity.x - 1, entity.y, entity.z + 1);
-            let botRight = this.environment.has(entity.x, entity.y - 1, entity.z + 1);
+            // Baked ambient occlusion is really weird
+            // let aoIntensity = 0.5;
 
-            if (left || lateralLeft) {
-                const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-                ao.anchor.x = 1;
-                ao.anchor.y = 0;
-                ao.rotation = -Math.PI / 2;
-                ao.alpha = aoIntensity;
-                entity.Up.addChild(ao);
-            }
+            // let top = this.environment.has(entity.x + 1, entity.y + 1, entity.z + 1);
+            // let left = this.environment.has(entity.x, entity.y + 1, entity.z + 1);
+            // let lateralLeft = this.environment.has(entity.x - 1, entity.y + 1, entity.z + 1);
+            // let right = this.environment.has(entity.x + 1, entity.y, entity.z + 1);
+            // let lateralRight = this.environment.has(entity.x + 1, entity.y - 1, entity.z + 1);
+            // let botLeft = this.environment.has(entity.x - 1, entity.y, entity.z + 1);
+            // let botRight = this.environment.has(entity.x, entity.y - 1, entity.z + 1);
 
-            if (right || lateralRight) {
-                const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-                ao.anchor.x = 0;
-                ao.anchor.y = 1;
-                ao.rotation = Math.PI / 2;
-                ao.alpha = aoIntensity;
-                entity.Up.addChild(ao);
-            }
+            // if (left || lateralLeft) {
+            //     const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
+            //     ao.anchor.x = 1;
+            //     ao.anchor.y = 0;
+            //     ao.rotation = -Math.PI / 2;
+            //     ao.alpha = aoIntensity;
+            //     entity.Up.addChild(ao);
+            // }
 
-            if (left || right || top) {
-                const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-                ao.anchor.x = 1;
-                ao.anchor.y = 1;
-                ao.rotation = Math.PI;
-                ao.alpha = aoIntensity;
-                entity.Up.addChild(ao);
-            }
+            // if (right || lateralRight) {
+            //     const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
+            //     ao.anchor.x = 0;
+            //     ao.anchor.y = 1;
+            //     ao.rotation = Math.PI / 2;
+            //     ao.alpha = aoIntensity;
+            //     entity.Up.addChild(ao);
+            // }
 
-            if (botLeft || botRight) {
-                const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-                ao.alpha = aoIntensity;
-                entity.Up.addChild(ao);
-            }
+            // if (left || right || top) {
+            //     const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
+            //     ao.anchor.x = 1;
+            //     ao.anchor.y = 1;
+            //     ao.rotation = Math.PI;
+            //     ao.alpha = aoIntensity;
+            //     entity.Up.addChild(ao);
+            // }
+
+            // if (botLeft || botRight) {
+            //     const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
+            //     ao.alpha = aoIntensity;
+            //     entity.Up.addChild(ao);
+            // }
 
 
             entity.Left = new FACE.Left(data.Left || data.default);
