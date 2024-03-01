@@ -102,8 +102,6 @@ const BILLBOARD = 1;
 const ENVIRONMENT = 0;
 const DYNAMIC = 1;
 
-extractFlag = (combined, flag) => (combined % (flag * 2) - flag + 1) > 0;
-
 // ENTITY (and Scene shortcuts for adding them)
 class Entity {
     constructor(id, x = 0, y = 0, z = 0) {
@@ -236,6 +234,7 @@ const VXF = [
 const LEVEL = {
     environment: new SpatialHash(),
     dynamic: new Set(),
+    name: 'level',
     // getLevelBackendLocation(entity) {
     //     return entity.id < 128 ? this.environment : this.dynamic;
     // },
@@ -260,51 +259,6 @@ const LEVEL = {
             entity.Up = new FACE.Up(data.Up || data.default);
             entity.sprite.addChild(entity.Up);
 
-            // Baked ambient occlusion is really weird
-            // let aoIntensity = 0.5;
-
-            // let top = this.environment.has(entity.x + 1, entity.y + 1, entity.z + 1);
-            // let left = this.environment.has(entity.x, entity.y + 1, entity.z + 1);
-            // let lateralLeft = this.environment.has(entity.x - 1, entity.y + 1, entity.z + 1);
-            // let right = this.environment.has(entity.x + 1, entity.y, entity.z + 1);
-            // let lateralRight = this.environment.has(entity.x + 1, entity.y - 1, entity.z + 1);
-            // let botLeft = this.environment.has(entity.x - 1, entity.y, entity.z + 1);
-            // let botRight = this.environment.has(entity.x, entity.y - 1, entity.z + 1);
-
-            // if (left || lateralLeft) {
-            //     const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-            //     ao.anchor.x = 1;
-            //     ao.anchor.y = 0;
-            //     ao.rotation = -Math.PI / 2;
-            //     ao.alpha = aoIntensity;
-            //     entity.Up.addChild(ao);
-            // }
-
-            // if (right || lateralRight) {
-            //     const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-            //     ao.anchor.x = 0;
-            //     ao.anchor.y = 1;
-            //     ao.rotation = Math.PI / 2;
-            //     ao.alpha = aoIntensity;
-            //     entity.Up.addChild(ao);
-            // }
-
-            // if (left || right || top) {
-            //     const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-            //     ao.anchor.x = 1;
-            //     ao.anchor.y = 1;
-            //     ao.rotation = Math.PI;
-            //     ao.alpha = aoIntensity;
-            //     entity.Up.addChild(ao);
-            // }
-
-            // if (botLeft || botRight) {
-            //     const ao = new PIXI.Sprite(ENGINE.assets.get('assets/ao.png'));
-            //     ao.alpha = aoIntensity;
-            //     entity.Up.addChild(ao);
-            // }
-
-
             entity.Left = new FACE.Left(data.Left || data.default);
             entity.sprite.addChild(entity.Left);
 
@@ -324,30 +278,21 @@ const LEVEL = {
         for (let [k, entity] of LEVEL.environment)
             this.renderSingle(entity);
     },
-
-    // renderEntity(entity) {
-    //     if (IDTEX[this.id].type == BILLBOARD) { // Billboard Sprite
-
-    //     } else { // Voxel time
-
-    //     }
-    //     if (this.environment == this.getLevelBackendLocation(entity)) { // Environment voxel
-    //         if (this.environment.get(entity.x, entity.y, entity.z + 1)) {
-
-    //         }
-    //     } else {
-
-    //     }
-
-    // },
     import(url) {
         ENGINE.loaded.level = false;
 
         fetch(url).then(r => r.blob()).then(blob => {
             // Clear for new scene
             // TODO: Actually destroy or free sprites/entities, all that jazz
-            LEVEL.environment.clear();
+
+            LEVEL.name = url.replace(/^.*[\\\/]/, '').replace(/\.[^/.]+$/, ""); // Grab file name from url
             LEVEL.dynamic.clear();
+            LEVEL.environment.forEach(e => {
+                SCENE.world.removeChild(e.sprite);
+                e.sprite.destroy({ children: true });
+                SCENE.world.remove(e);
+            });
+            LEVEL.environment.clear();
 
             const reader = new FileReader();
 
@@ -374,27 +319,53 @@ const LEVEL = {
                 }
 
                 ENGINE.loaded.level = true;
+                LEVEL.render();
                 ENGINE.loaded.check();
             };
             reader.readAsArrayBuffer(blob);
         });
+    },
+    export() {
+        const VXF_VERSION = VXF.length - 1;
+        const HEADER_SIZE = VXF[VXF_VERSION].head;
+        const BIN = new Uint8ClampedArray(new ArrayBuffer(HEADER_SIZE + 4 * (LEVEL.environment.size + LEVEL.dynamic.size)));
+        let i = 0;
+        BIN[i++] = 0x56;
+        BIN[i++] = 0x58;
+        BIN[i++] = 0x46;
+        BIN[i++] = VXF_VERSION & 0xff;
+        i = HEADER_SIZE;
+        LEVEL.environment.forEach(v => {
+            BIN[i++] = v.id;
+            BIN[i++] = v.x + 128;
+            BIN[i++] = v.y + 128;
+            BIN[i++] = v.z;
+        });
+        LEVEL.dynamic.forEach(v => {
+            BIN[i++] = v.id;
+            BIN[i++] = v.x + 128;
+            BIN[i++] = v.y + 128;
+            BIN[i++] = v.z;
+        });
+        console.log(BIN);
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([BIN], { type: 'application/octet-stream' }));
+        link.download = `${LEVEL.name}.vxf`; // Specify the file name
+        link.click();
     }
 }
-
-let a, b;
 
 // TESTING FUNCTION
 async function TEST_INITIALIZATION() {
 
-    for (let z = 0; z < 3; z++) {
-        LEVEL.create(0, 0, 0, z);
-        for (let x = -5; x <= 5; x++) {
-            for (let y = -5; y <= 5; y++) {
-                if (Math.random() > 0 + 0.3 * z)
-                    LEVEL.create(0, x, y, z);
-            }
-        }
-    }
-    LEVEL.render();
-
+    // for (let z = 0; z < 3; z++) {
+    //     LEVEL.create(0, 0, 0, z);
+    //     for (let x = -2; x <= 2; x++) {
+    //         for (let y = -2; y <= 2; y++) {
+    //             if (Math.random() > 0 + 0.3 * z)
+    //                 LEVEL.create(0, x, y, z);
+    //         }
+    //     }
+    // }
+    // LEVEL.render();
 };
