@@ -3,12 +3,28 @@ const ISO_STRETCH = 1.7320508075688773;
 const SKEW_STRETCH = 1.1547005383792515;
 const UNIT = (screen.height / 16.875) ^ 0;
 
+const KEY = {
+    UP: 'ArrowUp',
+    DOWN: 'ArrowDown',
+    LEFT: 'ArrowLeft',
+    RIGHT: 'ArrowRight',
+    ACTION1: 'KeyZ',
+    ACTION2: 'KeyX'
+}
+
 // FUNCTIONS
 function xyzToScreen(x, y, z) {
     return [
         (x - y) * UNIT / SKEW_STRETCH,
         -((x + y) / 2 + z) * UNIT
     ];
+}
+
+function clampVecXY(v, m) {
+    let r;
+    if ((r = Math.hypot(v.x, v.y)) <= m) return;
+    v.x *= m / r;
+    v.y *= m / r;
 }
 
 // GLOBALS
@@ -109,6 +125,7 @@ class Entity {
         this.y = y;
         this.z = z;
         this._z = z; // Previous Z
+        this.size = { x: 1, y: 1 }
 
         if (Entity.ID[id].setup) Entity.ID[id].setup(this); // Specific initialization
     }
@@ -119,7 +136,61 @@ class Entity {
             dynamic: true,
             default: "assets/blank.png",
             setup(entity) {
-                entity.tick = function () {
+
+                entity.vector = { x: 0, y: 0 };
+                entity.speed = .001;
+                entity.maxSpeed = .01;
+                entity.friction = 0.02;
+
+                entity.tick = function (delta = 1000 / 120) {
+                    const KRADIAN = [ // Stored radian directions to auto-compute the motion angle for the player
+                        0.25 * Math.PI, // Up
+                        1.25 * Math.PI, // Down
+                        .75 * Math.PI, // Left
+                        .5 * Math.PI, // Left Up
+                        1 * Math.PI, // Left Down
+                        1.75 * Math.PI, // Right
+                        0 * Math.PI, // Right Up
+                        1.5 * Math.PI // Right Down
+                    ];
+
+                    let r = (
+                        6 * ZEPHYR.Keys.down(KEY.RIGHT) + 3 * ZEPHYR.Keys.down(KEY.LEFT) +
+                        (2 * ZEPHYR.Keys.down(KEY.DOWN) + ZEPHYR.Keys.down(KEY.UP)) % 3
+                    ) % 9;
+                    if (r > 0) {
+                        this.vector.x += Math.cos(KRADIAN[r - 1]) * this.speed * delta;
+                        this.vector.y += Math.sin(KRADIAN[r - 1]) * this.speed * delta;
+                    }
+                    clampVecXY(this.vector, this.maxSpeed * delta);
+
+                    this.x += this.vector.x;
+                    this.y += this.vector.y;
+
+                    this.vector.x *= 1 - this.friction * delta;
+                    this.vector.y *= 1 - this.friction * delta;
+
+                    for (let x = Math.floor(this.x); x < Math.ceil(this.x + this.size.x); x++) {
+                        for (let y = Math.floor(this.y); y < Math.ceil(this.y + this.size.y); y++) {
+                            let e = LEVEL.environment.get(x, y, this.z);
+                            if (e) {
+                                let wx = Math.withinRange(this.x, e.x - this.size.x, x + e.size.x);
+                                let wy = Math.withinRange(this.y, e.y - this.size.y, y + e.size.y);
+                                if (wx <= 0 && wy <= 0) { // AABB Collision, just implemented manually
+                                    if (wx <= wy) {
+                                        this.y += this.y < y ? wy : -wy;
+                                    } else {
+                                        this.x += this.x < x ? wx : -wx;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // this.triggers.play();
+
+
+                    this.updatePosition();
                     // console.log("I'm active!")
                 }
             },
@@ -147,7 +218,7 @@ SCENE.world.updatePosition = function () {
         SCENE.world.put(this)
     }
     [this.sprite.x, this.sprite.y] = xyzToScreen(this.x, this.y, this.z);
-    SCENE.world.layers[this.z].edit();
+    this.sprite.zIndex = this.sprite.y;
     this._z = this.z; // Previous Z
 }
 SCENE.world.add = function (entity) {
@@ -173,7 +244,6 @@ SCENE.world.add = function (entity) {
 //             SCENE.world.put(this)
 //         }
 //         [this.sprite.x, this.sprite.y] = xyzToScreen(this.x, this.y, this.z);
-//         SCENE.world.layers[this.z].edit();
 //         this._z = this.z; // Previous Z
 //     }
 // }
@@ -190,7 +260,7 @@ SCENE.ui.updatePosition = function () {
     }
     this.sprite.x = this.x;
     this.sprite.y = this.y;
-    SCENE.ui.layers[this.z].edit();
+    this.sprite.zIndex = this.z;
     this._z = this.z; // Previous Z
 }
 SCENE.ui.add = function (entity) {
@@ -216,7 +286,6 @@ SCENE.ui.add = function (entity) {
 //         }
 //         this.sprite.x = this.x;
 //         this.sprite.y = this.y;
-//         SCENE.ui.layers[this.z].edit();
 //         this._z = this.z; // Previous Z
 //     }
 // }
@@ -291,7 +360,7 @@ const LEVEL = {
     environment: new SpatialHash(),
     dynamic: new Set(),
     name: 'level',
-    player: { x: 5, y: 5, z: 0 },
+    player: { x: 4, y: 4, z: 1 },
     // getLevelBackendLocation(entity) {
     //     return entity.id < 128 ? this.environment : this.dynamic;
     // },
@@ -332,13 +401,13 @@ const LEVEL = {
         this.renderSingle(LEVEL.player, true);
         for (let [k, entity] of LEVEL.environment)
             this.renderSingle(entity);
-        for (let [k, entity] of LEVEL.dynamic)
-            this.renderSingle(entity);
+        // for (let [k, entity] of LEVEL.dynamic)
+        //     this.renderSingle(entity);
     },
     import(url) {
         ENGINE.loaded.level = false;
 
-        let temPlayer = SCENE.world.add(new Entity(0, LEVEL.player.x, LEVEL.player.y, LEVEL.player.z));
+        LEVEL.player = { x: LEVEL.player.x, y: LEVEL.player.y, z: LEVEL.player.z };
 
         fetch(url).then(r => r.blob()).then(blob => {
             // Clear for new scene
@@ -377,10 +446,10 @@ const LEVEL = {
                     pointer += 4;
                 }
 
-                LEVEL.player = temPlayer;
-                SCENE.world.target = temPlayer.sprite;
-                temPlayer.updatePosition();
-                SCENE.world.add(temPlayer);
+                LEVEL.player = LEVEL.create(0, LEVEL.player.x, LEVEL.player.y, LEVEL.player.z);
+                SCENE.world.target = LEVEL.player.sprite;
+                LEVEL.player.updatePosition();
+                SCENE.world.add(LEVEL.player);
 
                 ENGINE.loaded.level = true;
                 LEVEL.render();
