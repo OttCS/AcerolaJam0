@@ -29,6 +29,7 @@ function clampVecXY(v, m) {
 
 // GLOBALS
 const ENGINE = {
+    culling: true,
     loaded: {
         editing: true,
         scene: false,
@@ -71,7 +72,9 @@ ENGINE.preloadTextures([
     'assets/blank.png',
     'assets/ao.png',
     'assets/grass.png',
-    'assets/brush.png'
+    'assets/brush.png',
+    'assets/path.png',
+    'assets/warn.png'
 ]);
 
 const SCENE = new PIXI.Application();
@@ -108,6 +111,8 @@ SCENE.setup = async function () {
         }
     });
 
+    SCENE.ticker.maxFPS = 0;
+
     ENGINE.loaded.scene = true;
     ENGINE.loaded.check();
 };
@@ -134,7 +139,12 @@ class Entity {
             id: 0,
             renderType: VOXEL,
             dynamic: true,
-            default: "assets/blank.png",
+            up: "assets/blank.png",
+            left: "assets/blank.png",
+            right: "assets/blank.png",
+            down: "assets/blank.png",
+            bleft: "assets/blank.png",
+            bright: "assets/blank.png",
             setup(entity) {
 
                 entity.vector = { x: 0, y: 0 };
@@ -176,7 +186,7 @@ class Entity {
                             if (e) {
                                 let wx = Math.withinRange(this.x, e.x - this.size.x, x + e.size.x);
                                 let wy = Math.withinRange(this.y, e.y - this.size.y, y + e.size.y);
-                                if (wx <= 0 && wy <= 0) { // AABB Collision, just implemented manually
+                                if (wx < 0 && wy < 0) { // AABB Collision, just implemented manually
                                     if (wx <= wy) {
                                         this.y += this.y < y ? wy : -wy;
                                     } else {
@@ -186,24 +196,39 @@ class Entity {
                             }
                         }
                     }
-
-                    // this.triggers.play();
-
-
                     this.updatePosition();
-                    // console.log("I'm active!")
                 }
             },
         },
         { // Grass
             id: 1,
             renderType: VOXEL,
-            default: "assets/grass.png"
+            up: "assets/grass.png",
+            left: "assets/grass.png",
+            right: "assets/grass.png",
+            // down: "assets/grass.png",
+            // bleft: "assets/grass.png",
+            // bright: "assets/grass.png",
         },
-        { // Concrete
+        { // Brush, the plant kind
             id: 2,
             renderType: VOXEL,
-            default: "assets/brush.png"
+            up: "assets/brush.png",
+            left: "assets/brush.png",
+            right: "assets/brush.png",
+            // down: "assets/brush.png",
+            // bleft: "assets/brush.png",
+            // bright: "assets/brush.png",
+        },
+        { // Carpet?
+            id: 3,
+            renderType: VOXEL,
+            up: "assets/warn.png",
+            left: "assets/warn.png",
+            right: "assets/warn.png",
+            // down: "assets/warn.png",
+            // bleft: "assets/brush.png",
+            // bright: "assets/brush.png",
         },
     ]
 }
@@ -227,27 +252,6 @@ SCENE.world.add = function (entity) {
     return entity;
 }
 
-// SCENE.world.Entity = class extends Entity {
-//     constructor(id, x, y, z) {
-//         super(id, x, y, z);
-//         this._z = z;
-//         SCENE.world.put(this);
-//         this.updatePosition();
-//     }
-//     updatePosition() {
-//         // If the z position has changed, swap the layer it's on
-//         if (this.z != this._z) {
-//             let newZ = this.z;
-//             this.z = this._z;
-//             SCENE.world.remove(this)
-//             this.z = newZ;
-//             SCENE.world.put(this)
-//         }
-//         [this.sprite.x, this.sprite.y] = xyzToScreen(this.x, this.y, this.z);
-//         this._z = this.z; // Previous Z
-//     }
-// }
-
 
 SCENE.ui.updatePosition = function () {
     // If the z position has changed, swap the layer it's on
@@ -268,27 +272,6 @@ SCENE.ui.add = function (entity) {
     entity.updatePosition = SCENE.ui.updatePosition;
     return entity;
 }
-
-// SCENE.ui.Entity = class extends Entity {
-//     constructor(id, x, y, z) {
-//         super(id, x, y, z);
-//         SCENE.ui.put(this);
-//         this.updatePosition();
-//     }
-//     updatePosition() {
-//         // If the z position has changed, swap the layer it's on
-//         if (this.z != this._z) {
-//             let newZ = this.z;
-//             this.z = this._z;
-//             SCENE.ui.remove(this)
-//             this.z = newZ;
-//             SCENE.ui.put(this)
-//         }
-//         this.sprite.x = this.x;
-//         this.sprite.y = this.y;
-//         this._z = this.z; // Previous Z
-//     }
-// }
 
 // Produces skewed Sprites to fit an isometric voxel's faces
 const FACE = {
@@ -318,8 +301,8 @@ const FACE = {
         }
     },
     Down: class extends PIXI.Sprite {
-        constructor(texture) {
-            super(texture);
+        constructor(url) {
+            super(ENGINE.assets.get(url));
             this.skew.x = -Math.PI / 3;
             this.skew.y = Math.PI / 6;
             this.height = this.width = UNIT;
@@ -327,21 +310,21 @@ const FACE = {
         }
     },
     BLeft: class extends PIXI.Sprite { // Back Left
-        constructor(texture) {
-            super(texture);
+        constructor(url) {
+            super(ENGINE.assets.get(url));
             this.skew.x = Math.PI;
             this.skew.y = 5 * Math.PI / 6;
             this.height = this.width = UNIT;
-            this.tint = 0x00ffff;
+            this.tint = 0xdfefff;
         }
     },
     BRight: class extends PIXI.Sprite { // Back Right
-        constructor(texture) {
-            super(texture);
+        constructor(url) {
+            super(ENGINE.assets.get(url));
             this.skew.x = Math.PI;
             this.skew.y = Math.PI / 6;
             this.height = this.width = UNIT;
-            this.tint = 0xff00ff;
+            this.tint = 0xbfdfff;
         }
     },
 }
@@ -374,6 +357,8 @@ const LEVEL = {
         if (renderImmediate)
             this.renderSingle(entity);
 
+        entity.updatePosition();
+
         return entity;
     },
     // Post-culled voxel face list
@@ -381,16 +366,27 @@ const LEVEL = {
     renderSingle(entity, log) {
         if (entity.data.renderType == VOXEL) { // Voxel
 
-            entity.Up = new FACE.Up(entity.data.Up || entity.data.default);
-            entity.sprite.addChild(entity.Up);
+            entity.rendered = true;
 
-            entity.Left = new FACE.Left(entity.data.Left || entity.data.default);
-            entity.sprite.addChild(entity.Left);
+            if (entity.data.down)
+                entity.sprite.addChild(entity.down = new FACE.Down(entity.data.down));
 
-            entity.Right = new FACE.Right(entity.data.Right || entity.data.default);
-            entity.sprite.addChild(entity.Right);
+            if (entity.data.bright)
+                entity.sprite.addChild(entity.bright = new FACE.BRight(entity.data.bright));
 
-            // Eventually add proper "Meshing" to reduce sprite number
+            if (entity.data.bleft)
+                entity.sprite.addChild(entity.bleft = new FACE.BLeft(entity.data.bleft));
+
+            if (entity.data.left)
+                entity.sprite.addChild(entity.left = new FACE.Left(entity.data.left));
+
+            if (entity.data.right)
+                entity.sprite.addChild(entity.right = new FACE.Right(entity.data.right));
+
+            if (entity.data.up)
+                entity.sprite.addChild(entity.up = new FACE.Up(entity.data.up));
+
+            // Eventually add proper "Meshing" to reduce number of sprites
 
         } else { // Billboard
 
@@ -400,7 +396,7 @@ const LEVEL = {
     render() {
         this.renderSingle(LEVEL.player, true);
         for (let [k, entity] of LEVEL.environment)
-            this.renderSingle(entity);
+            if (!entity.rendered) this.renderSingle(entity);
         // for (let [k, entity] of LEVEL.dynamic)
         //     this.renderSingle(entity);
     },
@@ -442,13 +438,12 @@ const LEVEL = {
                         BIN[pointer + 1] - 128,
                         BIN[pointer + 2] - 128,
                         BIN[pointer + 3]
-                    ).updatePosition();
+                    );
                     pointer += 4;
                 }
 
                 LEVEL.player = LEVEL.create(0, LEVEL.player.x, LEVEL.player.y, LEVEL.player.z);
                 SCENE.world.target = LEVEL.player.sprite;
-                LEVEL.player.updatePosition();
                 SCENE.world.add(LEVEL.player);
 
                 ENGINE.loaded.level = true;
@@ -498,22 +493,6 @@ async function TEST_INITIALIZATION() {
         LEVEL.import('level/demoBox.vxf');
     }
 
-    // let z = 0;
-    // // for (let z = 0; z < 3; z++) {
-    // //     LEVEL.create(0, 0, 0, z);
-    // let ring = 6;
-    // for (let x = -ring; x <= ring; x++) {
-    //     for (let y = -ring; y <= ring; y++) {
-    //         LEVEL.create(1, x, y, z);
-    //         if (x == -ring || x == ring || y == -ring || y == ring)
-    //             LEVEL.create(2, x, y, z + 1);
-
-    //         if (Math.random() * 4 > Math.hypot(x, y))
-    //             LEVEL.create(2, x, y, z + 1);
-    //     }
-    // }
-    // // }
-    // LEVEL.render();
 };
 
 SCENE.setup();

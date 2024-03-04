@@ -1,6 +1,6 @@
 /*!
- * PixiJS - v8.0.0-rc.10
- * Compiled Tue, 20 Feb 2024 18:41:20 UTC
+ * PixiJS - v8.0.0-rc.11
+ * Compiled Mon, 04 Mar 2024 13:14:07 UTC
  *
  * PixiJS is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -2091,7 +2091,7 @@ Deprecated since v${version}`);
       this._filters || (this._filters = { filters: null, effect: null, filterArea: null });
       const hasFilters = value && value.length > 0;
       const didChange = this._filters.effect && !hasFilters || !this._filters.effect && hasFilters;
-      this._filters.filters = value;
+      this._filters.filters = Object.freeze(value);
       if (didChange) {
         if (hasFilters) {
           const effect = getFilterEffect(value, this.filterArea);
@@ -8475,6 +8475,12 @@ Deprecated since v${version}`);
      * This adds a bundle of assets in one go so that you can resolve them as a group.
      * For example you could add a bundle for each screen in you pixi app
      * @example
+     * resolver.addBundle('animals', [
+     *  { alias: 'bunny', src: 'bunny.png' },
+     *  { alias: 'chicken', src: 'chicken.png' },
+     *  { alias: 'thumper', src: 'thumper.png' },
+     * ]);
+     * // or
      * resolver.addBundle('animals', {
      *     bunny: 'bunny.png',
      *     chicken: 'chicken.png',
@@ -8487,7 +8493,16 @@ Deprecated since v${version}`);
      */
     addBundle(bundleId, assets) {
       const assetNames = [];
-      assets.forEach((asset) => {
+      let convertedAssets = assets;
+      if (!Array.isArray(assets)) {
+        convertedAssets = Object.entries(assets).map(([alias, src]) => {
+          if (typeof src === "string" || Array.isArray(src)) {
+            return { alias, src };
+          }
+          return __spreadValues$_({ alias }, src);
+        });
+      }
+      convertedAssets.forEach((asset) => {
         const srcs = asset.src;
         const aliases = asset.alias;
         let ids;
@@ -10706,8 +10721,10 @@ Deprecated since v${version}`);
         this.resource.style.width = `${this.width}px`;
         this.resource.style.height = `${this.height}px`;
       }
-      this.resource.width = this.pixelWidth;
-      this.resource.height = this.pixelHeight;
+      if (this.resource.width !== this.pixelWidth || this.resource.height !== this.pixelHeight) {
+        this.resource.width = this.pixelWidth;
+        this.resource.height = this.pixelHeight;
+      }
     }
     resize(width = this.width, height = this.height, resolution = this._resolution) {
       const didResize = super.resize(width, height, resolution);
@@ -25002,7 +25019,7 @@ ${e}`);
 
   const WORKER_CODE$3 = "(function () {\n    'use strict';\n\n    const WHITE_PNG = \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=\";\n    async function checkImageBitmap() {\n      try {\n        if (typeof createImageBitmap !== \"function\")\n          return false;\n        const response = await fetch(WHITE_PNG);\n        const imageBlob = await response.blob();\n        const imageBitmap = await createImageBitmap(imageBlob);\n        return imageBitmap.width === 1 && imageBitmap.height === 1;\n      } catch (e) {\n        return false;\n      }\n    }\n    void checkImageBitmap().then((result) => {\n      self.postMessage(result);\n    });\n\n})();\n";
   let WORKER_URL$3 = null;
-  let WorkerInstance$3 = class WorkerInstance extends Worker
+  let WorkerInstance$3 = class WorkerInstance
   {
       constructor()
       {
@@ -25010,7 +25027,7 @@ ${e}`);
           {
               WORKER_URL$3 = URL.createObjectURL(new Blob([WORKER_CODE$3], { type: 'application/javascript' }));
           }
-          super(WORKER_URL$3);
+          this.worker = new Worker(WORKER_URL$3);
       }
   };
   WorkerInstance$3.revokeObjectURL = function revokeObjectURL()
@@ -25024,7 +25041,7 @@ ${e}`);
 
   const WORKER_CODE$2 = "(function () {\n    'use strict';\n\n    async function loadImageBitmap(url) {\n      const response = await fetch(url);\n      if (!response.ok) {\n        throw new Error(`[WorkerManager.loadImageBitmap] Failed to fetch ${url}: ${response.status} ${response.statusText}`);\n      }\n      const imageBlob = await response.blob();\n      const imageBitmap = await createImageBitmap(imageBlob);\n      return imageBitmap;\n    }\n    self.onmessage = async (event) => {\n      try {\n        const imageBitmap = await loadImageBitmap(event.data.data[0]);\n        self.postMessage({\n          data: imageBitmap,\n          uuid: event.data.uuid,\n          id: event.data.id\n        }, [imageBitmap]);\n      } catch (e) {\n        self.postMessage({\n          error: e,\n          uuid: event.data.uuid,\n          id: event.data.id\n        });\n      }\n    };\n\n})();\n";
   let WORKER_URL$2 = null;
-  let WorkerInstance$2 = class WorkerInstance extends Worker
+  let WorkerInstance$2 = class WorkerInstance
   {
       constructor()
       {
@@ -25032,7 +25049,7 @@ ${e}`);
           {
               WORKER_URL$2 = URL.createObjectURL(new Blob([WORKER_CODE$2], { type: 'application/javascript' }));
           }
-          super(WORKER_URL$2);
+          this.worker = new Worker(WORKER_URL$2);
       }
   };
   WorkerInstance$2.revokeObjectURL = function revokeObjectURL()
@@ -25059,7 +25076,7 @@ ${e}`);
       if (this._isImageBitmapSupported !== void 0)
         return this._isImageBitmapSupported;
       this._isImageBitmapSupported = new Promise((resolve) => {
-        const worker = new WorkerInstance$3();
+        const { worker } = new WorkerInstance$3();
         worker.addEventListener("message", (event) => {
           worker.terminate();
           WorkerInstance$3.revokeObjectURL();
@@ -25083,7 +25100,7 @@ ${e}`);
       let worker = this._workerPool.pop();
       if (!worker && this._createdWorkers < MAX_WORKERS) {
         this._createdWorkers++;
-        worker = new WorkerInstance$2();
+        worker = new WorkerInstance$2().worker;
         worker.addEventListener("message", (event) => {
           this._complete(event.data);
           this._returnWorker(event.target);
@@ -25486,6 +25503,12 @@ ${e}`);
      * @example
      * import { Assets } from 'pixi.js';
      *
+     * Assets.addBundle('animals', [
+     *  { alias: 'bunny', src: 'bunny.png' },
+     *  { alias: 'chicken', src: 'chicken.png' },
+     *  { alias: 'thumper', src: 'thumper.png' },
+     * ]);
+     * // or
      * Assets.addBundle('animals', {
      *     bunny: 'bunny.png',
      *     chicken: 'chicken.png',
@@ -26130,18 +26153,9 @@ ${e}`);
     return supportedTextureFormats;
   }
 
-  "use strict";
-  const basisTranscoderUrls = {
-    jsUrl: "https://files.pixijs.download/transcoders/basis/basis_transcoder.js",
-    wasmUrl: "https://files.pixijs.download/transcoders/basis/basis_transcoder.wasm"
-  };
-  function setBasisTranscoderPath(config) {
-    Object.assign(basisTranscoderUrls, config);
-  }
-
   const WORKER_CODE$1 = "(function () {\n    'use strict';\n\n    function createLevelBuffers(basisTexture, basisTranscoderFormat) {\n      const images = basisTexture.getNumImages();\n      const levels = basisTexture.getNumLevels(0);\n      const success = basisTexture.startTranscoding();\n      if (!success) {\n        throw new Error(\"startTranscoding failed\");\n      }\n      const levelBuffers = [];\n      for (let levelIndex = 0; levelIndex < levels; ++levelIndex) {\n        for (let sliceIndex = 0; sliceIndex < images; ++sliceIndex) {\n          const transcodeSize = basisTexture.getImageTranscodedSizeInBytes(sliceIndex, levelIndex, basisTranscoderFormat);\n          const levelBuffer = new Uint8Array(transcodeSize);\n          const success2 = basisTexture.transcodeImage(levelBuffer, sliceIndex, levelIndex, basisTranscoderFormat, 1, 0);\n          if (!success2) {\n            throw new Error(\"transcodeImage failed\");\n          }\n          levelBuffers.push(levelBuffer);\n        }\n      }\n      return levelBuffers;\n    }\n\n    const gpuFormatToBasisTranscoderFormatMap = {\n      \"bc3-rgba-unorm\": 3,\n      // cTFBC3_RGBA\n      \"bc7-rgba-unorm\": 6,\n      // cTFBC7_RGBA,\n      \"etc2-rgba8unorm\": 1,\n      // cTFETC2_RGBA,\n      \"astc-4x4-unorm\": 10,\n      // cTFASTC_4x4_RGBA,\n      // Uncompressed\n      rgba8unorm: 13,\n      // cTFRGBA32,\n      rgba4unorm: 16\n      // cTFRGBA4444,\n    };\n    function gpuFormatToBasisTranscoderFormat(transcoderFormat) {\n      const format = gpuFormatToBasisTranscoderFormatMap[transcoderFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported transcoderFormat: ${transcoderFormat}`);\n    }\n\n    const settings = {\n      jsUrl: \"basis/basis_transcoder.js\",\n      wasmUrl: \"basis/basis_transcoder.wasm\"\n    };\n    let basisTranscoderFormat;\n    let basisTranscodedTextureFormat;\n    let basisPromise;\n    async function getBasis() {\n      if (!basisPromise) {\n        const absoluteJsUrl = new URL(settings.jsUrl, location.origin).href;\n        const absoluteWasmUrl = new URL(settings.wasmUrl, location.origin).href;\n        importScripts(absoluteJsUrl);\n        basisPromise = new Promise((resolve) => {\n          BASIS({\n            locateFile: (_file) => absoluteWasmUrl\n          }).then((module) => {\n            module.initializeBasis();\n            resolve(module.BasisFile);\n          });\n        });\n      }\n      return basisPromise;\n    }\n    async function fetchBasisTexture(url, BasisTexture) {\n      const basisResponse = await fetch(url);\n      if (basisResponse.ok) {\n        const basisArrayBuffer = await basisResponse.arrayBuffer();\n        return new BasisTexture(new Uint8Array(basisArrayBuffer));\n      }\n      throw new Error(`Failed to load Basis texture: ${url}`);\n    }\n    const preferredTranscodedFormat = [\n      \"bc7-rgba-unorm\",\n      \"astc-4x4-unorm\",\n      \"etc2-rgba8unorm\",\n      \"bc3-rgba-unorm\",\n      \"rgba8unorm\"\n    ];\n    async function load(url) {\n      const BasisTexture = await getBasis();\n      const basisTexture = await fetchBasisTexture(url, BasisTexture);\n      const levelBuffers = createLevelBuffers(basisTexture, basisTranscoderFormat);\n      return {\n        width: basisTexture.getImageWidth(0, 0),\n        height: basisTexture.getImageHeight(0, 0),\n        format: basisTranscodedTextureFormat,\n        resource: levelBuffers,\n        alphaMode: \"no-premultiply-alpha\"\n      };\n    }\n    async function init(jsUrl, wasmUrl, supportedTextures) {\n      if (jsUrl)\n        settings.jsUrl = jsUrl;\n      if (wasmUrl)\n        settings.wasmUrl = wasmUrl;\n      basisTranscodedTextureFormat = preferredTranscodedFormat.filter((format) => supportedTextures.includes(format))[0];\n      basisTranscoderFormat = gpuFormatToBasisTranscoderFormat(basisTranscodedTextureFormat);\n      await getBasis();\n    }\n    const messageHandlers = {\n      init: async (data) => {\n        const { jsUrl, wasmUrl, supportedTextures } = data;\n        await init(jsUrl, wasmUrl, supportedTextures);\n      },\n      load: async (data) => {\n        var _a;\n        try {\n          const textureOptions = await load(data.url);\n          return {\n            type: \"load\",\n            url: data.url,\n            success: true,\n            textureOptions,\n            transferables: (_a = textureOptions.resource) == null ? void 0 : _a.map((arr) => arr.buffer)\n          };\n        } catch (e) {\n          throw e;\n        }\n      }\n    };\n    self.onmessage = async (messageEvent) => {\n      const message = messageEvent.data;\n      const response = await messageHandlers[message.type](message);\n      if (response) {\n        self.postMessage(response, response.transferables);\n      }\n    };\n\n})();\n";
   let WORKER_URL$1 = null;
-  let WorkerInstance$1 = class WorkerInstance extends Worker
+  let WorkerInstance$1 = class WorkerInstance
   {
       constructor()
       {
@@ -26149,7 +26163,7 @@ ${e}`);
           {
               WORKER_URL$1 = URL.createObjectURL(new Blob([WORKER_CODE$1], { type: 'application/javascript' }));
           }
-          super(WORKER_URL$1);
+          this.worker = new Worker(WORKER_URL$1);
       }
   };
   WorkerInstance$1.revokeObjectURL = function revokeObjectURL()
@@ -26162,11 +26176,20 @@ ${e}`);
   };
 
   "use strict";
+  const basisTranscoderUrls = {
+    jsUrl: "https://files.pixijs.download/transcoders/basis/basis_transcoder.js",
+    wasmUrl: "https://files.pixijs.download/transcoders/basis/basis_transcoder.wasm"
+  };
+  function setBasisTranscoderPath(config) {
+    Object.assign(basisTranscoderUrls, config);
+  }
+
+  "use strict";
   let basisWorker;
   const urlHash$1 = {};
   function getBasisWorker(supportedTextures) {
     if (!basisWorker) {
-      basisWorker = new WorkerInstance$1();
+      basisWorker = new WorkerInstance$1().worker;
       basisWorker.onmessage = (messageEvent) => {
         const { success, url, textureOptions } = messageEvent.data;
         if (!success) {
@@ -26405,18 +26428,9 @@ ${e}`);
     }
   };
 
-  "use strict";
-  const ktxTranscoderUrls = {
-    jsUrl: "https://files.pixijs.download/transcoders/ktx/libktx.js",
-    wasmUrl: "https://files.pixijs.download/transcoders/ktx/libktx.wasm"
-  };
-  function setKTXTranscoderPath(config) {
-    Object.assign(ktxTranscoderUrls, config);
-  }
-
   const WORKER_CODE = "(function () {\n    'use strict';\n\n    const converters = {\n      rgb8unorm: {\n        convertedFormat: \"rgba8unorm\",\n        convertFunction: convertRGBtoRGBA\n      },\n      \"rgb8unorm-srgb\": {\n        convertedFormat: \"rgba8unorm-srgb\",\n        convertFunction: convertRGBtoRGBA\n      }\n    };\n    function convertFormatIfRequired(textureOptions) {\n      const format = textureOptions.format;\n      if (converters[format]) {\n        const convertFunction = converters[format].convertFunction;\n        const levelBuffers = textureOptions.resource;\n        for (let i = 0; i < levelBuffers.length; i++) {\n          levelBuffers[i] = convertFunction(levelBuffers[i]);\n        }\n        textureOptions.format = converters[format].convertedFormat;\n      }\n    }\n    function convertRGBtoRGBA(levelBuffer) {\n      const pixelCount = levelBuffer.byteLength / 3;\n      const levelBufferWithAlpha = new Uint32Array(pixelCount);\n      for (let i = 0; i < pixelCount; ++i) {\n        levelBufferWithAlpha[i] = levelBuffer[i * 3] + (levelBuffer[i * 3 + 1] << 8) + (levelBuffer[i * 3 + 2] << 16) + 4278190080;\n      }\n      return new Uint8Array(levelBufferWithAlpha.buffer);\n    }\n\n    function createLevelBuffersFromKTX(ktxTexture) {\n      const levelBuffers = [];\n      for (let i = 0; i < ktxTexture.numLevels; i++) {\n        const imageData = ktxTexture.getImageData(i, 0, 0);\n        const levelBuffer = new Uint8Array(imageData.byteLength);\n        levelBuffer.set(imageData);\n        levelBuffers.push(levelBuffer);\n      }\n      return levelBuffers;\n    }\n\n    const glFormatToGPUFormatMap = {\n      6408: \"rgba8unorm\",\n      32856: \"bgra8unorm\",\n      //\n      32857: \"rgb10a2unorm\",\n      33189: \"depth16unorm\",\n      33190: \"depth24plus\",\n      33321: \"r8unorm\",\n      33323: \"rg8unorm\",\n      33325: \"r16float\",\n      33326: \"r32float\",\n      33327: \"rg16float\",\n      33328: \"rg32float\",\n      33329: \"r8sint\",\n      33330: \"r8uint\",\n      33331: \"r16sint\",\n      33332: \"r16uint\",\n      33333: \"r32sint\",\n      33334: \"r32uint\",\n      33335: \"rg8sint\",\n      33336: \"rg8uint\",\n      33337: \"rg16sint\",\n      33338: \"rg16uint\",\n      33339: \"rg32sint\",\n      33340: \"rg32uint\",\n      33778: \"bc2-rgba-unorm\",\n      33779: \"bc3-rgba-unorm\",\n      34836: \"rgba32float\",\n      34842: \"rgba16float\",\n      35056: \"depth24plus-stencil8\",\n      35898: \"rg11b10ufloat\",\n      35901: \"rgb9e5ufloat\",\n      35907: \"rgba8unorm-srgb\",\n      // bgra8unorm-srgb\n      36012: \"depth32float\",\n      36013: \"depth32float-stencil8\",\n      36168: \"stencil8\",\n      36208: \"rgba32uint\",\n      36214: \"rgba16uint\",\n      36220: \"rgba8uint\",\n      36226: \"rgba32sint\",\n      36232: \"rgba16sint\",\n      36238: \"rgba8sint\",\n      36492: \"bc7-rgba-unorm\",\n      36756: \"r8snorm\",\n      36757: \"rg8snorm\",\n      36759: \"rgba8snorm\",\n      37496: \"etc2-rgba8unorm\",\n      37808: \"astc-4x4-unorm\"\n    };\n    function glFormatToGPUFormat(glInternalFormat) {\n      const format = glFormatToGPUFormatMap[glInternalFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported glInternalFormat: ${glInternalFormat}`);\n    }\n\n    const vkFormatToGPUFormatMap = {\n      23: \"rgb8unorm\",\n      // VK_FORMAT_R8G8B8_UNORM\n      37: \"rgba8unorm\",\n      // VK_FORMAT_R8G8B8A8_UNORM\n      43: \"rgba8unorm-srgb\"\n      // VK_FORMAT_R8G8B8A8_SRGB\n      // TODO add more!\n    };\n    function vkFormatToGPUFormat(vkFormat) {\n      const format = vkFormatToGPUFormatMap[vkFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported VkFormat: ${vkFormat}`);\n    }\n\n    function getTextureFormatFromKTXTexture(ktxTexture) {\n      if (ktxTexture.classId === 2) {\n        return vkFormatToGPUFormat(ktxTexture.vkFormat);\n      }\n      return glFormatToGPUFormat(ktxTexture.glInternalformat);\n    }\n\n    const gpuFormatToBasisTranscoderFormatMap = {\n      \"bc3-rgba-unorm\": \"BC3_RGBA\",\n      \"bc7-rgba-unorm\": \"BC7_M5_RGBA\",\n      \"etc2-rgba8unorm\": \"ETC2_RGBA\",\n      \"astc-4x4-unorm\": \"ASTC_4x4_RGBA\",\n      // Uncompressed\n      rgba8unorm: \"RGBA32\",\n      rg11b10ufloat: \"R11F_G11F_B10F\"\n    };\n    function gpuFormatToKTXBasisTranscoderFormat(transcoderFormat) {\n      const format = gpuFormatToBasisTranscoderFormatMap[transcoderFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported transcoderFormat: ${transcoderFormat}`);\n    }\n\n    const settings = {\n      jsUrl: \"\",\n      wasmUrl: \"\"\n    };\n    let basisTranscoderFormat;\n    let basisTranscodedTextureFormat;\n    let ktxPromise;\n    async function getKTX() {\n      if (!ktxPromise) {\n        const absoluteJsUrl = new URL(settings.jsUrl, location.origin).href;\n        const absoluteWasmUrl = new URL(settings.wasmUrl, location.origin).href;\n        importScripts(absoluteJsUrl);\n        ktxPromise = new Promise((resolve) => {\n          LIBKTX({\n            locateFile: (_file) => absoluteWasmUrl\n          }).then((libktx) => {\n            resolve(libktx);\n          });\n        });\n      }\n      return ktxPromise;\n    }\n    async function fetchKTXTexture(url, ktx) {\n      const ktx2Response = await fetch(url);\n      if (ktx2Response.ok) {\n        const ktx2ArrayBuffer = await ktx2Response.arrayBuffer();\n        return new ktx.ktxTexture(new Uint8Array(ktx2ArrayBuffer));\n      }\n      throw new Error(`Failed to load KTX(2) texture: ${url}`);\n    }\n    const preferredTranscodedFormat = [\n      \"etc2-rgba8unorm\",\n      \"bc7-rgba-unorm\",\n      \"bc3-rgba-unorm\",\n      \"astc-4x4-unorm\",\n      \"rgba8unorm\"\n    ];\n    async function load(url) {\n      const ktx = await getKTX();\n      const ktxTexture = await fetchKTXTexture(url, ktx);\n      let format;\n      if (ktxTexture.needsTranscoding) {\n        format = basisTranscodedTextureFormat;\n        const transcodeFormat = ktx.TranscodeTarget[basisTranscoderFormat];\n        const result = ktxTexture.transcodeBasis(transcodeFormat, 0);\n        if (result !== ktx.ErrorCode.SUCCESS) {\n          throw new Error(\"Unable to transcode basis texture.\");\n        }\n      } else {\n        format = getTextureFormatFromKTXTexture(ktxTexture);\n      }\n      const levelBuffers = createLevelBuffersFromKTX(ktxTexture);\n      const textureOptions = {\n        width: ktxTexture.baseWidth,\n        height: ktxTexture.baseHeight,\n        format,\n        mipLevelCount: ktxTexture.numLevels,\n        resource: levelBuffers,\n        alphaMode: \"no-premultiply-alpha\"\n      };\n      convertFormatIfRequired(textureOptions);\n      return textureOptions;\n    }\n    async function init(jsUrl, wasmUrl, supportedTextures) {\n      if (jsUrl)\n        settings.jsUrl = jsUrl;\n      if (wasmUrl)\n        settings.wasmUrl = wasmUrl;\n      basisTranscodedTextureFormat = preferredTranscodedFormat.filter((format) => supportedTextures.includes(format))[0];\n      basisTranscoderFormat = gpuFormatToKTXBasisTranscoderFormat(basisTranscodedTextureFormat);\n      await getKTX();\n    }\n    const messageHandlers = {\n      init: async (data) => {\n        const { jsUrl, wasmUrl, supportedTextures } = data;\n        await init(jsUrl, wasmUrl, supportedTextures);\n      },\n      load: async (data) => {\n        var _a;\n        try {\n          const textureOptions = await load(data.url);\n          return {\n            type: \"load\",\n            url: data.url,\n            success: true,\n            textureOptions,\n            transferables: (_a = textureOptions.resource) == null ? void 0 : _a.map((arr) => arr.buffer)\n          };\n        } catch (e) {\n          throw e;\n        }\n      }\n    };\n    self.onmessage = async (messageEvent) => {\n      var _a;\n      const message = messageEvent.data;\n      const response = await ((_a = messageHandlers[message.type]) == null ? void 0 : _a.call(messageHandlers, message));\n      if (response) {\n        self.postMessage(response, response.transferables);\n      }\n    };\n\n})();\n";
   let WORKER_URL = null;
-  class WorkerInstance extends Worker
+  class WorkerInstance
   {
       constructor()
       {
@@ -26424,7 +26438,7 @@ ${e}`);
           {
               WORKER_URL = URL.createObjectURL(new Blob([WORKER_CODE], { type: 'application/javascript' }));
           }
-          super(WORKER_URL);
+          this.worker = new Worker(WORKER_URL);
       }
   }
   WorkerInstance.revokeObjectURL = function revokeObjectURL()
@@ -26437,11 +26451,20 @@ ${e}`);
   };
 
   "use strict";
+  const ktxTranscoderUrls = {
+    jsUrl: "https://files.pixijs.download/transcoders/ktx/libktx.js",
+    wasmUrl: "https://files.pixijs.download/transcoders/ktx/libktx.wasm"
+  };
+  function setKTXTranscoderPath(config) {
+    Object.assign(ktxTranscoderUrls, config);
+  }
+
+  "use strict";
   let ktxWorker;
   const urlHash = {};
   function getKTXWorker(supportedTextures) {
     if (!ktxWorker) {
-      ktxWorker = new WorkerInstance();
+      ktxWorker = new WorkerInstance().worker;
       ktxWorker.onmessage = (messageEvent) => {
         const { success, url, textureOptions } = messageEvent.data;
         if (!success) {
@@ -32193,9 +32216,6 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       renderTarget.colorTextures.forEach((texture) => {
         this._renderer.texture.unbind(texture);
       });
-      if (!gpuRenderTarget.depthStencilRenderBuffer && (renderTarget.stencil || renderTarget.depth)) {
-        this._initStencil(gpuRenderTarget);
-      }
       const gl = this._renderer.gl;
       gl.bindFramebuffer(gl.FRAMEBUFFER, gpuRenderTarget.framebuffer);
       const viewPortCache = this._viewPortCache;
@@ -32210,6 +32230,9 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
           viewport.width,
           viewport.height
         );
+      }
+      if (!gpuRenderTarget.depthStencilRenderBuffer && (renderTarget.stencil || renderTarget.depth)) {
+        this._initStencil(gpuRenderTarget);
       }
       this.clear(renderTarget, clear, clearColor);
     }
@@ -32489,7 +32512,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this.dirtyId = 0;
       this.isRoot = false;
       this._size = new Float32Array(2);
-      descriptor = __spreadValues$g(__spreadValues$g({}, _RenderTarget.defaultDescriptor), descriptor);
+      descriptor = __spreadValues$g(__spreadValues$g({}, _RenderTarget.defaultOptions), descriptor);
       this.stencil = descriptor.stencil;
       this.depth = descriptor.depth;
       this.isRoot = descriptor.isRoot;
@@ -32583,7 +32606,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
     }
   };
-  _RenderTarget.defaultDescriptor = {
+  _RenderTarget.defaultOptions = {
     width: 0,
     height: 0,
     resolution: 1,
@@ -36286,7 +36309,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
 
   "use strict";
   let saidHello = false;
-  const VERSION = "8.0.0-rc.10";
+  const VERSION = "8.0.0-rc.11";
   function sayHello(type) {
     if (saidHello) {
       return;
