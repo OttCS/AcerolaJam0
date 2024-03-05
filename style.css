@@ -9,14 +9,8 @@ body {
     width: 100vw;
     display: flex;
     /* cursor: none; */
-}
-
-canvas {
-    align-self: center;
-    /* image-rendering: -webkit-optimize-contrast;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: -o-pixelated;
-    image-rendering: pixelated; */
+    justify-content: center;
+    align-items: center;
 }
 
 #editor {
