@@ -516,33 +516,33 @@
             if (loadLevel) {
                 loadLevel = false;
                 LEVEL.import('level/demoBox.vxf');
+
+                // pre install
+                PIXI.BitmapFont.install({
+                    name: 'uiBasic',
+                    style: {
+                        // fill: 0xffffff,
+                        fontFamily: 'monospace',
+                    }
+                })
+
+                // new bitmap text with preinstalled font
+                const text = new PIXI.BitmapText({
+                    text: '',
+                    style: {
+                        fontFamily: 'uiBasic',
+                        fontSize: 24,
+                        anchor: { x: 0.5, y: 0.5 }
+                    },
+                    align: 'center',
+                    x: 256,
+                    y: 256
+                });
+
+                SCENE.ui.add(SCENE.ui.fps = {
+                    sprite: text
+                });
             }
-
-            // pre install
-            PIXI.BitmapFont.install({
-                name: 'uiBasic',
-                style: {
-                    // fill: 0xffffff,
-                    fontFamily: 'monospace',
-                }
-            })
-
-            // new bitmap text with preinstalled font
-            const text = new PIXI.BitmapText({
-                text: '',
-                style: {
-                    fontFamily: 'uiBasic',
-                    fontSize: 24,
-                    anchor: { x: 0.5, y: 0.5 }
-                },
-                align: 'center',
-                x: 256,
-                y: 256
-            });
-
-            SCENE.ui.add(SCENE.ui.fps = {
-                sprite: text
-            });
 
         };
 
