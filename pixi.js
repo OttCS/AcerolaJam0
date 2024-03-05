@@ -1,6 +1,6 @@
 /*!
- * PixiJS - v8.0.0-rc.11
- * Compiled Mon, 04 Mar 2024 13:14:07 UTC
+ * PixiJS - v8.0.0
+ * Compiled Tue, 05 Mar 2024 17:44:00 UTC
  *
  * PixiJS is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -668,7 +668,6 @@ var PIXI = (function (exports) {
      * - A return value of `null` means the previous value was overridden (e.g., {@link Color.multiply multiply},
      *   {@link Color.premultiply premultiply} or {@link Color.round round}).
      * - Otherwise, the color source used when setting is returned.
-     * @type {ColorSource}
      */
     set value(value) {
       if (value instanceof _Color) {
@@ -2023,7 +2022,7 @@ Deprecated since v${version}`);
         return;
       this.effects.push(effect);
       this.effects.sort((a, b) => a.priority - b.priority);
-      if (!this.isRenderGroupRoot && this.renderGroup) {
+      if (this.renderGroup) {
         this.renderGroup.structureDidChange = true;
       }
       this._updateIsSimple();
@@ -2319,6 +2318,13 @@ Deprecated since v${version}`);
       }
       return false;
     }
+    /**
+     * Checks whether the x and y coordinates given are contained within this rectangle including the stroke.
+     * @param x - The X coordinate of the point to test
+     * @param y - The Y coordinate of the point to test
+     * @param strokeWidth - The width of the line to check
+     * @returns Whether the x/y coordinates are within this rectangle
+     */
     strokeContains(x, y, strokeWidth) {
       const { width, height } = this;
       if (width <= 0 || height <= 0)
@@ -2480,9 +2486,13 @@ Deprecated since v${version}`);
   const defaultMatrix = new Matrix();
   class Bounds {
     constructor(minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity) {
+      /** @default Infinity */
       this.minX = Infinity;
+      /** @default Infinity */
       this.minY = Infinity;
+      /** @default -Infinity */
       this.maxX = -Infinity;
+      /** @default -Infinity */
       this.maxY = -Infinity;
       this.matrix = defaultMatrix;
       this.minX = minX;
@@ -2490,6 +2500,14 @@ Deprecated since v${version}`);
       this.maxX = maxX;
       this.maxY = maxY;
     }
+    /**
+     * Checks if bounds are empty.
+     * @returns - True if empty.
+     */
+    isEmpty() {
+      return this.minX > this.maxX || this.minY > this.maxY;
+    }
+    /** The bounding rectangle of the bounds. */
     get rectangle() {
       if (!this._rectangle) {
         this._rectangle = new Rectangle();
@@ -2505,6 +2523,7 @@ Deprecated since v${version}`);
       }
       return rectangle;
     }
+    /** Clears the bounds and resets. */
     clear() {
       this.minX = Infinity;
       this.minY = Infinity;
@@ -2513,6 +2532,13 @@ Deprecated since v${version}`);
       this.matrix = defaultMatrix;
       return this;
     }
+    /**
+     * Sets the bounds.
+     * @param x0 - left X of frame
+     * @param y0 - top Y of frame
+     * @param x1 - right X of frame
+     * @param y1 - bottom Y of frame
+     */
     set(x0, y0, x1, y1) {
       this.minX = x0;
       this.minY = y0;
@@ -2584,18 +2610,36 @@ Deprecated since v${version}`);
       this.maxX = maxX;
       this.maxY = maxY;
     }
+    /**
+     * Adds a rectangle to the bounds.
+     * @param rect - The rectangle to be added.
+     * @param matrix - The matrix to apply to the bounds.
+     */
     addRect(rect, matrix) {
       this.addFrame(rect.x, rect.y, rect.x + rect.width, rect.y + rect.height, matrix);
     }
+    /**
+     * Adds other {@link Bounds}.
+     * @param bounds - The Bounds to be added
+     * @param matrix
+     */
     addBounds(bounds, matrix) {
       this.addFrame(bounds.minX, bounds.minY, bounds.maxX, bounds.maxY, matrix);
     }
+    /**
+     * Adds other Bounds, masked with Bounds.
+     * @param mask - The Bounds to be added.
+     */
     addBoundsMask(mask) {
       this.minX = this.minX > mask.minX ? this.minX : mask.minX;
       this.minY = this.minY > mask.minY ? this.minY : mask.minY;
       this.maxX = this.maxX < mask.maxX ? this.maxX : mask.maxX;
       this.maxY = this.maxY < mask.maxY ? this.maxY : mask.maxY;
     }
+    /**
+     * Adds other Bounds, multiplied with matrix.
+     * @param matrix - The matrix to apply to the bounds.
+     */
     applyMatrix(matrix) {
       const minX = this.minX;
       const minY = this.minY;
@@ -2627,6 +2671,10 @@ Deprecated since v${version}`);
       this.maxX = x > this.maxX ? x : this.maxX;
       this.maxY = y > this.maxY ? y : this.maxY;
     }
+    /**
+     * Resizes the bounds object to include the given rectangle.
+     * @param rect - The rectangle to be included.
+     */
     fit(rect) {
       if (this.minX < rect.left)
         this.minX = rect.left;
@@ -2638,6 +2686,12 @@ Deprecated since v${version}`);
         this.maxY = rect.bottom;
       return this;
     }
+    /**
+     * Pads bounds object, making it grow in all directions.
+     * If paddingY is omitted, both paddingX and paddingY will be set to paddingX.
+     * @param paddingX - The horizontal padding amount.
+     * @param paddingY - The vertical padding amount.
+     */
     pad(paddingX, paddingY = paddingX) {
       this.minX -= paddingX;
       this.maxX += paddingX;
@@ -2645,6 +2699,7 @@ Deprecated since v${version}`);
       this.maxY += paddingY;
       return this;
     }
+    /** Ceils the bounds. */
     ceil() {
       this.minX = Math.floor(this.minX);
       this.minY = Math.floor(this.minY);
@@ -2652,9 +2707,15 @@ Deprecated since v${version}`);
       this.maxY = Math.ceil(this.maxY);
       return this;
     }
+    /** Clones the bounds. */
     clone() {
       return new Bounds(this.minX, this.minY, this.maxX, this.maxY);
     }
+    /**
+     * Scales the bounds by the given values
+     * @param x - The X value to scale by.
+     * @param y - The Y value to scale by.
+     */
     scale(x, y = x) {
       this.minX *= x;
       this.minY *= y;
@@ -2662,6 +2723,7 @@ Deprecated since v${version}`);
       this.maxY *= y;
       return this;
     }
+    /** the x value of the bounds. */
     get x() {
       return this.minX;
     }
@@ -2670,6 +2732,7 @@ Deprecated since v${version}`);
       this.minX = value;
       this.maxX = value + width;
     }
+    /** the y value of the bounds. */
     get y() {
       return this.minY;
     }
@@ -2678,30 +2741,37 @@ Deprecated since v${version}`);
       this.minY = value;
       this.maxY = value + height;
     }
+    /** the width value of the bounds. */
     get width() {
       return this.maxX - this.minX;
     }
     set width(value) {
       this.maxX = this.minX + value;
     }
+    /** the height value of the bounds. */
     get height() {
       return this.maxY - this.minY;
     }
     set height(value) {
       this.maxY = this.minY + value;
     }
+    /** the left value of the bounds. */
     get left() {
       return this.minX;
     }
+    /** the right value of the bounds. */
     get right() {
       return this.maxX;
     }
+    /** the top value of the bounds. */
     get top() {
       return this.minY;
     }
+    /** the bottom value of the bounds. */
     get bottom() {
       return this.maxY;
     }
+    /** Is the bounds positive. */
     get isPositive() {
       return this.maxX - this.minX > 0 && this.maxY - this.minY > 0;
     }
@@ -2742,6 +2812,11 @@ Deprecated since v${version}`);
       this.maxX = maxX;
       this.maxY = maxY;
     }
+    /**
+     * Checks if the point is contained within the bounds.
+     * @param x - x coordinate
+     * @param y - y coordinate
+     */
     containsPoint(x, y) {
       if (this.minX <= x && this.minY <= y && this.maxX >= x && this.maxY >= y) {
         return true;
@@ -3474,20 +3549,16 @@ Deprecated since v${version}`);
        * @ignore
        */
       this._sy = 1;
-      /** The rotation amount. */
+      /**
+       * The rotation amount.
+       * @internal
+       * @ignore
+       */
       this._rotation = 0;
       // / COLOR related props //////////////
       // color stored as ABGR
-      /**
-       * @internal
-       * @ignore
-       */
       this.localColor = 16777215;
       this.localAlpha = 1;
-      /**
-       * @internal
-       * @ignore
-       */
       this.groupAlpha = 1;
       // A
       this.groupColor = 16777215;
@@ -3531,9 +3602,13 @@ Deprecated since v${version}`);
        *
        *  view          container
        * [000000000000][00000000000]
+       * @ignore
        */
       this._didChangeId = 0;
-      /** property that tracks if the container transform has changed */
+      /**
+       * property that tracks if the container transform has changed
+       * @ignore
+       */
       this._didLocalTransformChangeId = -1;
       assignWithIgnore(this, options, {
         children: true,
@@ -3916,9 +3991,14 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Updates the local transform using the given matrix.
+     * @param matrix - The matrix to use for updating the transform.
+     */
     setFromMatrix(matrix) {
       matrix.decompose(this);
     }
+    /** Updates the local transform. */
     updateLocalTransform() {
       if ((this._didLocalTransformChangeId & 15) === this._didChangeId)
         return;
@@ -9218,6 +9298,9 @@ Deprecated since v${version}`);
     return id;
   }
   const _TextureStyle = class _TextureStyle extends EventEmitter {
+    /**
+     * @param options - options for the style
+     */
     constructor(options = {}) {
       var _a, _b, _c, _d, _e, _f, _g;
       super();
@@ -9229,6 +9312,7 @@ Deprecated since v${version}`);
        * between 1 and 16, inclusive. The used value of {@link GPUSamplerDescriptor#maxAnisotropy} will
        * be clamped to the maximum value that the platform supports.
        * @internal
+       * @ignore
        */
       this._maxAnisotropy = 1;
       options = __spreadValues$Z(__spreadValues$Z({}, _TextureStyle.defaultOptions), options);
@@ -9250,6 +9334,7 @@ Deprecated since v${version}`);
       this.addressModeV = value;
       this.addressModeW = value;
     }
+    /** setting this will set wrapModeU,wrapModeV and wrapModeW all at once! */
     get addressMode() {
       return this.addressModeU;
     }
@@ -9265,9 +9350,11 @@ Deprecated since v${version}`);
       this.minFilter = value;
       this.mipmapFilter = value;
     }
+    /** setting this will set magFilter,minFilter and mipmapFilter all at once!  */
     get scaleMode() {
       return this.magFilter;
     }
+    /** Specifies the maximum anisotropy value clamp used by the sampler. */
     set maxAnisotropy(value) {
       this._maxAnisotropy = Math.min(value, 16);
       if (this._maxAnisotropy > 1) {
@@ -9296,7 +9383,7 @@ Deprecated since v${version}`);
       this.removeAllListeners();
     }
   };
-  // override to set styles globally
+  /** default options for the style */
   _TextureStyle.defaultOptions = {
     addressMode: "clamp-to-edge",
     scaleMode: "linear"
@@ -9321,6 +9408,9 @@ Deprecated since v${version}`);
     return a;
   };
   const _TextureSource = class _TextureSource extends EventEmitter {
+    /**
+     * @param options - options for creating a new TextureSource
+     */
     constructor(options = {}) {
       var _a, _b, _c;
       super();
@@ -9348,7 +9438,6 @@ Deprecated since v${version}`);
        */
       this.uploadMethodId = "unknown";
       // dimensions
-      /** @internal */
       this._resolution = 1;
       /** the pixel width of this texture source. This is the REAL pure number, not accounting resolution */
       this.pixelWidth = 1;
@@ -9452,42 +9541,49 @@ Deprecated since v${version}`);
       (_b = this._style) == null ? void 0 : _b.on("change", this._onStyleChange, this);
       this._onStyleChange();
     }
+    /** setting this will set wrapModeU,wrapModeV and wrapModeW all at once! */
     get addressMode() {
       return this._style.addressMode;
     }
     set addressMode(value) {
       this._style.addressMode = value;
     }
+    /** setting this will set wrapModeU,wrapModeV and wrapModeW all at once! */
     get repeatMode() {
       return this._style.addressMode;
     }
     set repeatMode(value) {
       this._style.addressMode = value;
     }
+    /** Specifies the sampling behavior when the sample footprint is smaller than or equal to one texel. */
     get magFilter() {
       return this._style.magFilter;
     }
     set magFilter(value) {
       this._style.magFilter = value;
     }
+    /** Specifies the sampling behavior when the sample footprint is larger than one texel. */
     get minFilter() {
       return this._style.minFilter;
     }
     set minFilter(value) {
       this._style.minFilter = value;
     }
+    /** Specifies behavior for sampling between mipmap levels. */
     get mipmapFilter() {
       return this._style.mipmapFilter;
     }
     set mipmapFilter(value) {
       this._style.mipmapFilter = value;
     }
+    /** Specifies the minimum and maximum levels of detail, respectively, used internally when sampling a texture. */
     get lodMinClamp() {
       return this._style.lodMinClamp;
     }
     set lodMinClamp(value) {
       this._style.lodMinClamp = value;
     }
+    /** Specifies the minimum and maximum levels of detail, respectively, used internally when sampling a texture. */
     get lodMaxClamp() {
       return this._style.lodMaxClamp;
     }
@@ -9606,6 +9702,7 @@ Deprecated since v${version}`);
     set scaleMode(value) {
       this._style.scaleMode = value;
     }
+    /** setting this will set magFilter,minFilter and mipmapFilter all at once!  */
     get scaleMode() {
       return this._style.scaleMode;
     }
@@ -9775,6 +9872,10 @@ Deprecated since v${version}`);
       }
       return out;
     }
+    /**
+     * Updates matrices if texture was changed
+     * @returns - whether or not it was updated
+     */
     update() {
       const tex = this._texture;
       this._updateID++;
@@ -9810,6 +9911,9 @@ Deprecated since v${version}`);
 
   "use strict";
   class Texture extends EventEmitter {
+    /**
+     * @param {TextureOptions} param0 - Options for the texture
+     */
     constructor({
       source,
       label,
@@ -10352,7 +10456,6 @@ Deprecated since v${version}`);
       }, rest));
       this.renderPipeId = "sprite";
       this.batched = true;
-      /** @internal */
       this._didSpriteUpdate = false;
       this._bounds = { minX: 0, maxX: 1, minY: 0, maxY: 0 };
       this._sourceBounds = { minX: 0, maxX: 1, minY: 0, maxY: 0 };
@@ -10396,9 +10499,14 @@ Deprecated since v${version}`);
       this._texture = value;
       this.onViewUpdate();
     }
+    /** The texture that the sprite is using. */
     get texture() {
       return this._texture;
     }
+    /**
+     * The local bounds of the sprite.
+     * @type {rendering.Bounds}
+     */
     get bounds() {
       if (this._boundsDirty) {
         this._updateBounds();
@@ -10406,6 +10514,10 @@ Deprecated since v${version}`);
       }
       return this._bounds;
     }
+    /**
+     * The bounds of the sprite, taking the texture's trim into account.
+     * @type {rendering.Bounds}
+     */
     get sourceBounds() {
       if (this._sourceBoundsDirty) {
         this._updateSourceBounds();
@@ -10413,7 +10525,10 @@ Deprecated since v${version}`);
       }
       return this._sourceBounds;
     }
-    // passed local space..
+    /**
+     * Checks if the object contains the given point.
+     * @param point - The point to check
+     */
     containsPoint(point) {
       const bounds = this.sourceBounds;
       if (point.x >= bounds.maxX && point.x <= bounds.minX) {
@@ -10423,13 +10538,14 @@ Deprecated since v${version}`);
       }
       return false;
     }
+    /**
+     * Adds the bounds of this object to the bounds object.
+     * @param bounds - The output bounds object.
+     */
     addBounds(bounds) {
       const _bounds = this._texture.trim ? this.sourceBounds : this.bounds;
       bounds.addFrame(_bounds.minX, _bounds.minY, _bounds.maxX, _bounds.maxY);
     }
-    /**
-     * @internal
-     */
     onViewUpdate() {
       this._didChangeId += 1 << 12;
       this._didSpriteUpdate = true;
@@ -10496,7 +10612,10 @@ Deprecated since v${version}`);
     set anchor(value) {
       typeof value === "number" ? this._anchor.set(value) : this._anchor.copyFrom(value);
     }
-    /** Whether or not to round the x/y position of the sprite. */
+    /**
+     *  Whether or not to round the x/y position of the sprite.
+     * @type {boolean}
+     */
     get roundPixels() {
       return !!this._roundPixels;
     }
@@ -10831,7 +10950,9 @@ Deprecated since v${version}`);
       var _a;
       super(options);
       // Public
+      /** Whether or not the video is ready to play. */
       this.isReady = false;
+      /** The upload method for this texture. */
       this.uploadMethodId = "video";
       options = __spreadValues$V(__spreadValues$V({}, _VideoSource.defaultOptions), options);
       this._autoUpdate = true;
@@ -11108,15 +11229,23 @@ Deprecated since v${version}`);
     }
   };
   _VideoSource.extension = ExtensionType.TextureSource;
-  // Public static
+  /** The default options for video sources. */
   _VideoSource.defaultOptions = __spreadProps$m(__spreadValues$V({}, TextureSource.defaultOptions), {
+    /** If true, the video will start loading immediately. */
     autoLoad: true,
+    /** If true, the video will start playing as soon as it is loaded. */
     autoPlay: true,
+    /** The number of times a second to update the texture from the video. Leave at 0 to update at every render. */
     updateFPS: 0,
+    /** If true, the video will be loaded with the `crossorigin` attribute. */
     crossorigin: true,
+    /** If true, the video will loop when it ends. */
     loop: false,
+    /** If true, the video will be muted. */
     muted: true,
+    /** If true, the video will play inline. */
     playsinline: true,
+    /** If true, the video will be preloaded. */
     preload: false
   });
   /**
@@ -11225,13 +11354,14 @@ Deprecated since v${version}`);
       };
       this.shrinkToFit = shrinkToFit != null ? shrinkToFit : true;
     }
-    /** @todo */
+    /** the data in the buffer */
     get data() {
       return this._data;
     }
     set data(value) {
       this.setDataWithSize(value, value.length, true);
     }
+    /** whether the buffer is static or not */
     get static() {
       return !!(this.descriptor.usage & BufferUsage.STATIC);
     }
@@ -11284,6 +11414,7 @@ Deprecated since v${version}`);
       this._updateID++;
       this.emit("update", this);
     }
+    /** Destroys the buffer */
     destroy() {
       this.emit("destroy", this);
       this._data = null;
@@ -11779,6 +11910,7 @@ Deprecated since v${version}`);
       this.textures = [];
       this.count = 0;
     }
+    /** Clear the textures and their locations. */
     clear() {
       for (let i = 0; i < this.count; i++) {
         const t = this.textures[i];
@@ -13836,6 +13968,7 @@ Deprecated since v${version}`);
     ],
     name: "graphicsContext"
   };
+  /** The default options for the GraphicsContextSystem. */
   _GraphicsContextSystem.defaultOptions = {
     /**
      * A value from 0 to 1 that controls the smoothness of bezier curves (the higher the smoother)
@@ -13895,6 +14028,7 @@ Deprecated since v${version}`);
         this.data ^= 1 << OFFSET$1;
       }
     }
+    /** The culling settings for this state none - No culling back - Back face culling front - Front face culling */
     set cullMode(value) {
       if (value === "none") {
         this.culling = false;
@@ -13984,6 +14118,10 @@ Deprecated since v${version}`);
     toString() {
       return `[pixi.js/core:State blendMode=${this.blendMode} clockwiseFrontFace=${this.clockwiseFrontFace} culling=${this.culling} depthMask=${this.depthMask} polygonOffset=${this.polygonOffset}]`;
     }
+    /**
+     * A quickly getting an instance of a State that is configured for 2d rendering.
+     * @returns a new State with values set for 2d rendering
+     */
     static for2d() {
       const state = new _State();
       state.depthTest = false;
@@ -14816,6 +14954,12 @@ Deprecated since v${version}`);
       this._poolKeyHash[texture.uid] = key;
       return texture;
     }
+    /**
+     * Gets extra texture of the same size as input renderTexture
+     * @param texture - The texture to check what size it is.
+     * @param antialias - Whether to use antialias.
+     * @returns A texture that is a power of two
+     */
     getSameSizeTexture(texture, antialias = false) {
       const source = texture.source;
       return this.getOptimalTexture(texture.width, texture.height, source._resolution, antialias);
@@ -15834,51 +15978,66 @@ Deprecated since v${version}`);
       super(...arguments);
       /** The map of characters by character code. */
       this.chars = /* @__PURE__ */ Object.create(null);
-      /** The line-height of the font face in pixels. */
+      /**
+       * The line-height of the font face in pixels.
+       * @type {number}
+       */
       this.lineHeight = 0;
-      /** The name of the font face. */
+      /**
+       * The name of the font face
+       * @type {string}
+       */
       this.fontFamily = "";
+      /** The metrics of the font face. */
       this.fontMetrics = { fontSize: 0, ascent: 0, descent: 0 };
+      /**
+       * The offset of the font face from the baseline.
+       * @type {number}
+       */
       this.baseLineOffset = 0;
       /** The range and type of the distance field for this font. */
       this.distanceField = { type: "none", range: 0 };
       /** The map of base page textures (i.e., sheets of glyphs). */
       this.pages = [];
+      /** The size of the font face in pixels. */
       this.baseMeasurementFontSize = 100;
       this.baseRenderedFontSize = 100;
     }
     /**
-     * @deprecated since 8.0.0
      * The name of the font face.
+     * @deprecated since 8.0.0 Use `fontFamily` instead.
      */
     get font() {
       deprecation(v8_0_0, "BitmapFont.font is deprecated, please use BitmapFont.fontFamily instead.");
       return this.fontFamily;
     }
-    /** @deprecated since 8.0.0 */
+    /**
+     * The map of base page textures (i.e., sheets of glyphs).
+     * @deprecated since 8.0.0 Use `pages` instead.
+     */
     get pageTextures() {
       deprecation(v8_0_0, "BitmapFont.pageTextures is deprecated, please use BitmapFont.pages instead.");
       return this.pages;
     }
     /**
-     * @deprecated since 8.0.0
      * The size of the font face in pixels.
+     * @deprecated since 8.0.0 Use `fontMetrics.fontSize` instead.
      */
     get size() {
       deprecation(v8_0_0, "BitmapFont.size is deprecated, please use BitmapFont.fontMetrics.fontSize instead.");
       return this.fontMetrics.fontSize;
     }
     /**
-     * @deprecated since 8.0.0
      * The kind of distance field for this font or "none".
+     * @deprecated since 8.0.0 Use `distanceField.type` instead.
      */
     get distanceFieldRange() {
       deprecation(v8_0_0, "BitmapFont.distanceFieldRange is deprecated, please use BitmapFont.distanceField.range instead.");
       return this.distanceField.range;
     }
     /**
-     * @deprecated since 8.0.0
      * The range of the distance field in pixels.
+     * @deprecated since 8.0.0 Use `distanceField.range` instead.
      */
     get distanceFieldType() {
       deprecation(v8_0_0, "BitmapFont.distanceFieldType is deprecated, please use BitmapFont.distanceField.type instead.");
@@ -16175,6 +16334,13 @@ Deprecated since v${version}`);
       dy *= dy;
       return dx + dy <= r2;
     }
+    /**
+     * Checks whether the x and y coordinates given are contained within this circle including the stroke.
+     * @param x - The X coordinate of the point to test
+     * @param y - The Y coordinate of the point to test
+     * @param width - The width of the line to check
+     * @returns Whether the x/y coordinates are within this Circle
+     */
     strokeContains(x, y, width) {
       if (this.radius === 0)
         return false;
@@ -16265,6 +16431,13 @@ Deprecated since v${version}`);
       normy *= normy;
       return normx + normy <= 1;
     }
+    /**
+     * Checks whether the x and y coordinates given are contained within this ellipse including stroke
+     * @param x - The X coordinate of the point to test
+     * @param y - The Y coordinate of the point to test
+     * @param width
+     * @returns Whether the x/y coords are within this ellipse
+     */
     strokeContains(x, y, width) {
       const { halfWidth, halfHeight } = this;
       if (halfWidth <= 0 || halfHeight <= 0) {
@@ -16346,7 +16519,7 @@ Deprecated since v${version}`);
   "use strict";
   class Polygon {
     /**
-     * @param {PointData[]|number[]} points - This can be an array of Points
+     * @param points - This can be an array of Points
      *  that form the polygon, a flat array of numbers that will be interpreted as [x,y, x,y, ...], or
      *  the arguments passed can be all the points of the polygon e.g.
      *  `new Polygon(new Point(), new Point(), ...)`, or the arguments passed can be flat
@@ -16400,6 +16573,13 @@ Deprecated since v${version}`);
       }
       return inside;
     }
+    /**
+     * Checks whether the x and y coordinates given are contained within this polygon including the stroke.
+     * @param x - The X coordinate of the point to test
+     * @param y - The Y coordinate of the point to test
+     * @param strokeWidth - The width of the line to check
+     * @returns Whether the x/y coordinates are within this polygon
+     */
     strokeContains(x, y, strokeWidth) {
       const halfStrokeWidth = strokeWidth / 2;
       const halfStrokeWidthSqrd = halfStrokeWidth * halfStrokeWidth;
@@ -16600,6 +16780,13 @@ Deprecated since v${version}`);
       }
       return false;
     }
+    /**
+     * Checks whether the x and y coordinates given are contained within this rectangle including the stroke.
+     * @param pX - The X coordinate of the point to test
+     * @param pY - The Y coordinate of the point to test
+     * @param strokeWidth - The width of the line to check
+     * @returns Whether the x/y coordinates are within this rectangle
+     */
     strokeContains(pX, pY, strokeWidth) {
       const { x, y, width, height, radius } = this;
       const halfStrokeWidth = strokeWidth / 2;
@@ -17162,15 +17349,28 @@ Deprecated since v${version}`);
   const tempRectangle = new Rectangle();
   class ShapePath {
     constructor(graphicsPath2D) {
+      /** The list of shape primitives that make up the path. */
       this.shapePrimitives = [];
       this._currentPoly = null;
       this._bounds = new Bounds();
       this._graphicsPath2D = graphicsPath2D;
     }
+    /**
+     * Sets the starting point for a new sub-path. Any subsequent drawing commands are considered part of this path.
+     * @param x - The x-coordinate for the starting point.
+     * @param y - The y-coordinate for the starting point.
+     * @returns The instance of the current object for chaining.
+     */
     moveTo(x, y) {
       this.startPoly(x, y);
       return this;
     }
+    /**
+     * Connects the current point to a new point with a straight line. This method updates the current path.
+     * @param x - The x-coordinate of the new point to connect to.
+     * @param y - The y-coordinate of the new point to connect to.
+     * @returns The instance of the current object for chaining.
+     */
     lineTo(x, y) {
       this._ensurePoly();
       const points = this._currentPoly.points;
@@ -17181,18 +17381,51 @@ Deprecated since v${version}`);
       }
       return this;
     }
-    arc(x, y, radius, startAngle, endAngle, anticlockwise) {
+    /**
+     * Adds an arc to the path. The arc is centered at (x, y)
+     *  position with radius `radius` starting at `startAngle` and ending at `endAngle`.
+     * @param x - The x-coordinate of the arc's center.
+     * @param y - The y-coordinate of the arc's center.
+     * @param radius - The radius of the arc.
+     * @param startAngle - The starting angle of the arc, in radians.
+     * @param endAngle - The ending angle of the arc, in radians.
+     * @param counterclockwise - Specifies whether the arc should be drawn in the anticlockwise direction. False by default.
+     * @returns The instance of the current object for chaining.
+     */
+    arc(x, y, radius, startAngle, endAngle, counterclockwise) {
       this._ensurePoly(false);
       const points = this._currentPoly.points;
-      buildArc(points, x, y, radius, startAngle, endAngle, anticlockwise);
+      buildArc(points, x, y, radius, startAngle, endAngle, counterclockwise);
       return this;
     }
+    /**
+     * Adds an arc to the path with the arc tangent to the line joining two specified points.
+     * The arc radius is specified by `radius`.
+     * @param x1 - The x-coordinate of the first point.
+     * @param y1 - The y-coordinate of the first point.
+     * @param x2 - The x-coordinate of the second point.
+     * @param y2 - The y-coordinate of the second point.
+     * @param radius - The radius of the arc.
+     * @returns The instance of the current object for chaining.
+     */
     arcTo(x1, y1, x2, y2, radius) {
       this._ensurePoly();
       const points = this._currentPoly.points;
       buildArcTo(points, x1, y1, x2, y2, radius);
       return this;
     }
+    /**
+     * Adds an SVG-style arc to the path, allowing for elliptical arcs based on the SVG spec.
+     * @param rx - The x-radius of the ellipse.
+     * @param ry - The y-radius of the ellipse.
+     * @param xAxisRotation - The rotation of the ellipse's x-axis relative
+     * to the x-axis of the coordinate system, in degrees.
+     * @param largeArcFlag - Determines if the arc should be greater than or less than 180 degrees.
+     * @param sweepFlag - Determines if the arc should be swept in a positive angle direction.
+     * @param x - The x-coordinate of the arc's end point.
+     * @param y - The y-coordinate of the arc's end point.
+     * @returns The instance of the current object for chaining.
+     */
     arcToSvg(rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x, y) {
       const points = this._currentPoly.points;
       buildArcToSvg(
@@ -17209,6 +17442,19 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Adds a cubic Bezier curve to the path.
+     * It requires three points: the first two are control points and the third one is the end point.
+     * The starting point is the last point in the current path.
+     * @param cp1x - The x-coordinate of the first control point.
+     * @param cp1y - The y-coordinate of the first control point.
+     * @param cp2x - The x-coordinate of the second control point.
+     * @param cp2y - The y-coordinate of the second control point.
+     * @param x - The x-coordinate of the end point.
+     * @param y - The y-coordinate of the end point.
+     * @param smoothness - Optional parameter to adjust the smoothness of the curve.
+     * @returns The instance of the current object for chaining.
+     */
     bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y, smoothness) {
       this._ensurePoly();
       const currentPoly = this._currentPoly;
@@ -17226,6 +17472,16 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Adds a quadratic curve to the path. It requires two points: the control point and the end point.
+     * The starting point is the last point in the current path.
+     * @param cp1x - The x-coordinate of the control point.
+     * @param cp1y - The y-coordinate of the control point.
+     * @param x - The x-coordinate of the end point.
+     * @param y - The y-coordinate of the end point.
+     * @param smoothing - Optional parameter to adjust the smoothness of the curve.
+     * @returns The instance of the current object for chaining.
+     */
     quadraticCurveTo(cp1x, cp1y, x, y, smoothing) {
       this._ensurePoly();
       const currentPoly = this._currentPoly;
@@ -17241,10 +17497,21 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Closes the current path by drawing a straight line back to the start.
+     * If the shape is already closed or there are no points in the path, this method does nothing.
+     * @returns The instance of the current object for chaining.
+     */
     closePath() {
       this.endPoly(true);
       return this;
     }
+    /**
+     * Adds another path to the current path. This method allows for the combination of multiple paths into one.
+     * @param path - The `GraphicsPath` object representing the path to add.
+     * @param transform - An optional `Matrix` object to apply a transformation to the path before adding it.
+     * @returns The instance of the current object for chaining.
+     */
     addPath(path, transform) {
       this.endPoly();
       if (transform && !transform.isIdentity()) {
@@ -17257,23 +17524,61 @@ Deprecated since v${version}`);
       }
       return this;
     }
+    /**
+     * Finalizes the drawing of the current path. Optionally, it can close the path.
+     * @param closePath - A boolean indicating whether to close the path after finishing. False by default.
+     */
     finish(closePath = false) {
       this.endPoly(closePath);
     }
+    /**
+     * Draws a rectangle shape. This method adds a new rectangle path to the current drawing.
+     * @param x - The x-coordinate of the top-left corner of the rectangle.
+     * @param y - The y-coordinate of the top-left corner of the rectangle.
+     * @param w - The width of the rectangle.
+     * @param h - The height of the rectangle.
+     * @param transform - An optional `Matrix` object to apply a transformation to the rectangle.
+     * @returns The instance of the current object for chaining.
+     */
     rect(x, y, w, h, transform) {
       this.drawShape(new Rectangle(x, y, w, h), transform);
       return this;
     }
+    /**
+     * Draws a circle shape. This method adds a new circle path to the current drawing.
+     * @param x - The x-coordinate of the center of the circle.
+     * @param y - The y-coordinate of the center of the circle.
+     * @param radius - The radius of the circle.
+     * @param transform - An optional `Matrix` object to apply a transformation to the circle.
+     * @returns The instance of the current object for chaining.
+     */
     circle(x, y, radius, transform) {
       this.drawShape(new Circle(x, y, radius), transform);
       return this;
     }
+    /**
+     * Draws a polygon shape. This method allows for the creation of complex polygons by specifying a sequence of points.
+     * @param points - An array of numbers representing the x and y coordinates of the polygon's vertices, in sequence.
+     * @param close - A boolean indicating whether to close the polygon path. True by default.
+     * @param transform - An optional `Matrix` object to apply a transformation to the polygon.
+     * @returns The instance of the current object for chaining.
+     */
     poly(points, close, transform) {
       const polygon = new Polygon(points);
       polygon.closePath = close;
       this.drawShape(polygon, transform);
       return this;
     }
+    /**
+     * Draws a regular polygon with a specified number of sides. All sides and angles are equal.
+     * @param x - The x-coordinate of the center of the polygon.
+     * @param y - The y-coordinate of the center of the polygon.
+     * @param radius - The radius of the circumscribed circle of the polygon.
+     * @param sides - The number of sides of the polygon. Must be 3 or more.
+     * @param rotation - The rotation angle of the polygon, in radians. Zero by default.
+     * @param transform - An optional `Matrix` object to apply a transformation to the polygon.
+     * @returns The instance of the current object for chaining.
+     */
     regularPoly(x, y, radius, sides, rotation = 0, transform) {
       sides = Math.max(sides | 0, 3);
       const startAngle = -1 * Math.PI / 2 + rotation;
@@ -17289,6 +17594,18 @@ Deprecated since v${version}`);
       this.poly(polygon, true, transform);
       return this;
     }
+    /**
+     * Draws a polygon with rounded corners.
+     * Similar to `regularPoly` but with the ability to round the corners of the polygon.
+     * @param x - The x-coordinate of the center of the polygon.
+     * @param y - The y-coordinate of the center of the polygon.
+     * @param radius - The radius of the circumscribed circle of the polygon.
+     * @param sides - The number of sides of the polygon. Must be 3 or more.
+     * @param corner - The radius of the rounding of the corners.
+     * @param rotation - The rotation angle of the polygon, in radians. Zero by default.
+     * @param smoothness - Optional parameter to adjust the smoothness of the rounding.
+     * @returns The instance of the current object for chaining.
+     */
     roundPoly(x, y, radius, sides, corner, rotation = 0, smoothness) {
       sides = Math.max(sides | 0, 3);
       if (corner <= 0) {
@@ -17319,12 +17636,17 @@ Deprecated since v${version}`);
       return this.closePath();
     }
     /**
-     * Draw a Shape with rounded corners.
-     * Supports custom radius for each point.
-     * @param points - Corners of the shape to draw. Minimum length is 3.
-     * @param radius - Corners default radius.
-     * @param useQuadratic - If true, rounded corners will be drawn using quadraticCurve instead of arc.
-     * @param smoothness - If using quadraticCurve, this is the smoothness of the curve.
+     * Draws a shape with rounded corners. This function supports custom radius for each corner of the shape.
+     * Optionally, corners can be rounded using a quadratic curve instead of an arc, providing a different aesthetic.
+     * @param points - An array of `RoundedPoint` representing the corners of the shape to draw.
+     * A minimum of 3 points is required.
+     * @param radius - The default radius for the corners.
+     * This radius is applied to all corners unless overridden in `points`.
+     * @param useQuadratic - If set to true, rounded corners are drawn using a quadraticCurve
+     *  method instead of an arc method. Defaults to false.
+     * @param smoothness - Specifies the smoothness of the curve when `useQuadratic` is true.
+     * Higher values make the curve smoother.
+     * @returns The instance of the current object for chaining.
      */
     roundShape(points, radius, useQuadratic = false, smoothness) {
       if (points.length < 3) {
@@ -17399,19 +17721,57 @@ Deprecated since v${version}`);
       }
       return this.poly(points, true, transform);
     }
+    /**
+     * Draws an ellipse at the specified location and with the given x and y radii.
+     * An optional transformation can be applied, allowing for rotation, scaling, and translation.
+     * @param x - The x-coordinate of the center of the ellipse.
+     * @param y - The y-coordinate of the center of the ellipse.
+     * @param radiusX - The horizontal radius of the ellipse.
+     * @param radiusY - The vertical radius of the ellipse.
+     * @param transform - An optional `Matrix` object to apply a transformation to the ellipse. This can include rotations.
+     * @returns The instance of the current object for chaining.
+     */
     ellipse(x, y, radiusX, radiusY, transform) {
       this.drawShape(new Ellipse(x, y, radiusX, radiusY), transform);
       return this;
     }
+    /**
+     * Draws a rectangle with rounded corners.
+     * The corner radius can be specified to determine how rounded the corners should be.
+     * An optional transformation can be applied, which allows for rotation, scaling, and translation of the rectangle.
+     * @param x - The x-coordinate of the top-left corner of the rectangle.
+     * @param y - The y-coordinate of the top-left corner of the rectangle.
+     * @param w - The width of the rectangle.
+     * @param h - The height of the rectangle.
+     * @param radius - The radius of the rectangle's corners. If not specified, corners will be sharp.
+     * @param transform - An optional `Matrix` object to apply a transformation to the rectangle.
+     * @returns The instance of the current object for chaining.
+     */
     roundRect(x, y, w, h, radius, transform) {
       this.drawShape(new RoundedRectangle(x, y, w, h, radius), transform);
       return this;
     }
+    /**
+     * Draws a given shape on the canvas.
+     * This is a generic method that can draw any type of shape specified by the `ShapePrimitive` parameter.
+     * An optional transformation matrix can be applied to the shape, allowing for complex transformations.
+     * @param shape - The shape to draw, defined as a `ShapePrimitive` object.
+     * @param matrix - An optional `Matrix` for transforming the shape. This can include rotations,
+     * scaling, and translations.
+     * @returns The instance of the current object for chaining.
+     */
     drawShape(shape, matrix) {
       this.endPoly();
       this.shapePrimitives.push({ shape, transform: matrix });
       return this;
     }
+    /**
+     * Starts a new polygon path from the specified starting point.
+     * This method initializes a new polygon or ends the current one if it exists.
+     * @param x - The x-coordinate of the starting point of the new polygon.
+     * @param y - The y-coordinate of the starting point of the new polygon.
+     * @returns The instance of the current object for chaining.
+     */
     startPoly(x, y) {
       let currentPoly = this._currentPoly;
       if (currentPoly) {
@@ -17422,6 +17782,14 @@ Deprecated since v${version}`);
       this._currentPoly = currentPoly;
       return this;
     }
+    /**
+     * Ends the current polygon path. If `closePath` is set to true,
+     * the path is closed by connecting the last point to the first one.
+     * This method finalizes the current polygon and prepares it for drawing or adding to the shape primitives.
+     * @param closePath - A boolean indicating whether to close the polygon by connecting the last point
+     *  back to the starting point. False by default.
+     * @returns The instance of the current object for chaining.
+     */
     endPoly(closePath = false) {
       const shape = this._currentPoly;
       if (shape && shape.points.length > 2) {
@@ -17452,6 +17820,7 @@ Deprecated since v${version}`);
         }
       }
     }
+    /** Builds the path. */
     buildPath() {
       const path = this._graphicsPath2D;
       this.shapePrimitives.length = 0;
@@ -17462,6 +17831,7 @@ Deprecated since v${version}`);
       }
       this.finish();
     }
+    /** Gets the bounds of the path. */
     get bounds() {
       const bounds = this._bounds;
       bounds.clear();
@@ -17481,6 +17851,10 @@ Deprecated since v${version}`);
 
   "use strict";
   class GraphicsPath {
+    /**
+     * Creates a `GraphicsPath` instance optionally from an SVG path string or an array of `PathInstruction`.
+     * @param instructions - An SVG path string or an array of `PathInstruction` objects.
+     */
     constructor(instructions) {
       this.instructions = [];
       this.uid = uid("graphicsPath");
@@ -17492,6 +17866,10 @@ Deprecated since v${version}`);
         this.instructions = (_a = instructions == null ? void 0 : instructions.slice()) != null ? _a : [];
       }
     }
+    /**
+     * Provides access to the internal shape path, ensuring it is up-to-date with the current instructions.
+     * @returns The `ShapePath` instance associated with this `GraphicsPath`.
+     */
     get shapePath() {
       if (!this._shapePath) {
         this._shapePath = new ShapePath(this);
@@ -17502,6 +17880,12 @@ Deprecated since v${version}`);
       }
       return this._shapePath;
     }
+    /**
+     * Adds another `GraphicsPath` to this path, optionally applying a transformation.
+     * @param path - The `GraphicsPath` to add.
+     * @param transform - An optional transformation to apply to the added path.
+     * @returns The instance of the current object for chaining.
+     */
     addPath(path, transform) {
       path = path.clone();
       this.instructions.push({ action: "addPath", data: [path, transform] });
@@ -17528,6 +17912,17 @@ Deprecated since v${version}`);
       this._dirty = true;
       return this;
     }
+    /**
+     * Adds a cubic Bezier curve to the path.
+     * It requires two points: the second control point and the end point. The first control point is assumed to be
+     * The starting point is the last point in the current path.
+     * @param cp2x - The x-coordinate of the second control point.
+     * @param cp2y - The y-coordinate of the second control point.
+     * @param x - The x-coordinate of the end point.
+     * @param y - The y-coordinate of the end point.
+     * @param smoothness - Optional parameter to adjust the smoothness of the curve.
+     * @returns The instance of the current object for chaining.
+     */
     bezierCurveToShort(cp2x, cp2y, x, y, smoothness) {
       const last = this.instructions[this.instructions.length - 1];
       const lastPoint = this.getLastPoint(Point.shared);
@@ -17548,6 +17943,11 @@ Deprecated since v${version}`);
       this._dirty = true;
       return this;
     }
+    /**
+     * Closes the current path by drawing a straight line back to the start.
+     * If the shape is already closed or there are no points in the path, this method does nothing.
+     * @returns The instance of the current object for chaining.
+     */
     closePath() {
       this.instructions.push({ action: "closePath", data: [] });
       this._dirty = true;
@@ -17572,6 +17972,13 @@ Deprecated since v${version}`);
       this._dirty = true;
       return this;
     }
+    /**
+     * Adds a quadratic curve to the path. It uses the previous point as the control point.
+     * @param x - The x-coordinate of the end point.
+     * @param y - The y-coordinate of the end point.
+     * @param smoothness - Optional parameter to adjust the smoothness of the curve.
+     * @returns The instance of the current object for chaining.
+     */
     quadraticCurveToShort(x, y, smoothness) {
       const last = this.instructions[this.instructions.length - 1];
       const lastPoint = this.getLastPoint(Point.shared);
@@ -17592,11 +17999,28 @@ Deprecated since v${version}`);
       this._dirty = true;
       return this;
     }
+    /**
+     * Draws a rectangle shape. This method adds a new rectangle path to the current drawing.
+     * @param x - The x-coordinate of the top-left corner of the rectangle.
+     * @param y - The y-coordinate of the top-left corner of the rectangle.
+     * @param w - The width of the rectangle.
+     * @param h - The height of the rectangle.
+     * @param transform - An optional `Matrix` object to apply a transformation to the rectangle.
+     * @returns The instance of the current object for chaining.
+     */
     rect(x, y, w, h, transform) {
       this.instructions.push({ action: "rect", data: [x, y, w, h, transform] });
       this._dirty = true;
       return this;
     }
+    /**
+     * Draws a circle shape. This method adds a new circle path to the current drawing.
+     * @param x - The x-coordinate of the center of the circle.
+     * @param y - The y-coordinate of the center of the circle.
+     * @param radius - The radius of the circle.
+     * @param transform - An optional `Matrix` object to apply a transformation to the circle.
+     * @returns The instance of the current object for chaining.
+     */
     circle(x, y, radius, transform) {
       this.instructions.push({ action: "circle", data: [x, y, radius, transform] });
       this._dirty = true;
@@ -17637,6 +18061,24 @@ Deprecated since v${version}`);
       this._dirty = true;
       return this;
     }
+    /**
+     * Draws a star shape centered at a specified location. This method allows for the creation
+     *  of stars with a variable number of points, outer radius, optional inner radius, and rotation.
+     * The star is drawn as a closed polygon with alternating outer and inner vertices to create the star's points.
+     * An optional transformation can be applied to scale, rotate, or translate the star as needed.
+     * @param x - The x-coordinate of the center of the star.
+     * @param y - The y-coordinate of the center of the star.
+     * @param points - The number of points of the star.
+     * @param radius - The outer radius of the star (distance from the center to the outer points).
+     * @param innerRadius - Optional. The inner radius of the star
+     * (distance from the center to the inner points between the outer points).
+     * If not provided, defaults to half of the `radius`.
+     * @param rotation - Optional. The rotation of the star in radians, where 0 is aligned with the y-axis.
+     * Defaults to 0, meaning one point is directly upward.
+     * @param transform - An optional `Matrix` object to apply a transformation to the star.
+     * This can include rotations, scaling, and translations.
+     * @returns The instance of the current object for chaining further drawing commands.
+     */
     // eslint-disable-next-line max-len
     star(x, y, points, radius, innerRadius, rotation, transform) {
       innerRadius = innerRadius || radius / 2;
@@ -17655,6 +18097,14 @@ Deprecated since v${version}`);
       this.poly(polygon, true, transform);
       return this;
     }
+    /**
+     * Creates a copy of the current `GraphicsPath` instance. This method supports both shallow and deep cloning.
+     * A shallow clone copies the reference of the instructions array, while a deep clone creates a new array and
+     * copies each instruction individually, ensuring that modifications to the instructions of the cloned `GraphicsPath`
+     * do not affect the original `GraphicsPath` and vice versa.
+     * @param deep - A boolean flag indicating whether the clone should be deep.
+     * @returns A new `GraphicsPath` instance that is a clone of the current instance.
+     */
     clone(deep = false) {
       const newGraphicsPath2D = new GraphicsPath();
       if (!deep) {
@@ -17672,6 +18122,20 @@ Deprecated since v${version}`);
       this._dirty = true;
       return this;
     }
+    /**
+     * Applies a transformation matrix to all drawing instructions within the `GraphicsPath`.
+     * This method enables the modification of the path's geometry according to the provided
+     * transformation matrix, which can include translations, rotations, scaling, and skewing.
+     *
+     * Each drawing instruction in the path is updated to reflect the transformation,
+     * ensuring the visual representation of the path is consistent with the applied matrix.
+     *
+     * Note: The transformation is applied directly to the coordinates and control points of the drawing instructions,
+     * not to the path as a whole. This means the transformation's effects are baked into the individual instructions,
+     * allowing for fine-grained control over the path's appearance.
+     * @param matrix - A `Matrix` object representing the transformation to apply.
+     * @returns The instance of the current object for chaining further operations.
+     */
     transform(matrix) {
       if (matrix.isIdentity())
         return this;
@@ -17763,6 +18227,20 @@ Deprecated since v${version}`);
     get bounds() {
       return this.shapePath.bounds;
     }
+    /**
+     * Retrieves the last point from the current drawing instructions in the `GraphicsPath`.
+     * This method is useful for operations that depend on the path's current endpoint,
+     * such as connecting subsequent shapes or paths. It supports various drawing instructions,
+     * ensuring the last point's position is accurately determined regardless of the path's complexity.
+     *
+     * If the last instruction is a `closePath`, the method iterates backward through the instructions
+     *  until it finds an actionable instruction that defines a point (e.g., `moveTo`, `lineTo`,
+     * `quadraticCurveTo`, etc.). For compound paths added via `addPath`, it recursively retrieves
+     * the last point from the nested path.
+     * @param out - A `Point` object where the last point's coordinates will be stored.
+     * This object is modified directly to contain the result.
+     * @returns The `Point` object containing the last point's coordinates.
+     */
     getLastPoint(out) {
       let index = this.instructions.length - 1;
       let lastInstruction = this.instructions[index];
@@ -18142,8 +18620,9 @@ Deprecated since v${version}`);
       this._boundsDirty = true;
     }
     /**
-     * Creates a new GraphicsContext object with the same values as this one.
-     * @returns A clone of this GraphicsContext
+     * Creates a new GraphicsContext object that is a clone of this instance, copying all properties,
+     * including the current drawing state, transformations, styles, and instructions.
+     * @returns A new GraphicsContext instance with the same properties and state as this one.
      */
     clone() {
       const clone = new _GraphicsContext();
@@ -18158,22 +18637,42 @@ Deprecated since v${version}`);
       clone._boundsDirty = true;
       return clone;
     }
+    /**
+     * The current fill style of the graphics context. This can be a color, gradient, pattern, or a more complex style defined by a FillStyle object.
+     */
     get fillStyle() {
       return this._fillStyle;
     }
     set fillStyle(value) {
       this._fillStyle = convertFillInputToFillStyle(value, _GraphicsContext.defaultFillStyle);
     }
+    /**
+     * The current stroke style of the graphics context. Similar to fill styles, stroke styles can encompass colors, gradients, patterns, or more detailed configurations via a StrokeStyle object.
+     */
     get strokeStyle() {
       return this._strokeStyle;
     }
     set strokeStyle(value) {
       this._strokeStyle = convertFillInputToFillStyle(value, _GraphicsContext.defaultStrokeStyle);
     }
+    /**
+     * Sets the current fill style of the graphics context. The fill style can be a color, gradient,
+     * pattern, or a more complex style defined by a FillStyle object.
+     * @param style - The fill style to apply. This can be a simple color, a gradient or pattern object,
+     *                or a FillStyle or ConvertedFillStyle object.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     setFillStyle(style) {
       this._fillStyle = convertFillInputToFillStyle(style, _GraphicsContext.defaultFillStyle);
       return this;
     }
+    /**
+     * Sets the current stroke style of the graphics context. Similar to fill styles, stroke styles can
+     * encompass colors, gradients, patterns, or more detailed configurations via a StrokeStyle object.
+     * @param style - The stroke style to apply. Can be defined as a color, a gradient or pattern,
+     *                or a StrokeStyle or ConvertedStrokeStyle object.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     setStrokeStyle(style) {
       this._strokeStyle = convertFillInputToFillStyle(style, _GraphicsContext.defaultStrokeStyle);
       return this;
@@ -18195,6 +18694,11 @@ Deprecated since v${version}`);
       this.onUpdate();
       return this;
     }
+    /**
+     * Resets the current path. Any previous path and its commands are discarded and a new path is
+     * started. This is typically called before beginning a new shape or series of drawing commands.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     beginPath() {
       this._activePath = new GraphicsPath();
       return this;
@@ -18231,6 +18735,12 @@ Deprecated since v${version}`);
       this._activePath.clear();
       this._activePath.moveTo(x, y);
     }
+    /**
+     * Strokes the current path with the current stroke style. This method can take an optional
+     * FillStyleInputs parameter to define the stroke's appearance, including its color, width, and other properties.
+     * @param style - (Optional) The stroke style to apply. Can be defined as a simple color or a more complex style object. If omitted, uses the current stroke style.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     stroke(style) {
       let path;
       const lastInstruction = this.instructions[this.instructions.length - 1];
@@ -18254,6 +18764,12 @@ Deprecated since v${version}`);
       this._tick = 0;
       return this;
     }
+    /**
+     * Applies a cutout to the last drawn shape. This is used to create holes or complex shapes by
+     * subtracting a path from the previously drawn path. If a hole is not completely in a shape, it will
+     * fail to cut correctly!
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     cut() {
       for (let i = 0; i < 2; i++) {
         const lastInstruction = this.instructions[this.instructions.length - 1 - i];
@@ -18272,6 +18788,17 @@ Deprecated since v${version}`);
       this._initNextPathLocation();
       return this;
     }
+    /**
+     * Adds an arc to the current path, which is centered at (x, y) with the specified radius,
+     * starting and ending angles, and direction.
+     * @param x - The x-coordinate of the arc's center.
+     * @param y - The y-coordinate of the arc's center.
+     * @param radius - The arc's radius.
+     * @param startAngle - The starting angle, in radians.
+     * @param endAngle - The ending angle, in radians.
+     * @param counterclockwise - (Optional) Specifies whether the arc is drawn counterclockwise (true) or clockwise (false). Defaults to false.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     arc(x, y, radius, startAngle, endAngle, counterclockwise) {
       this._tick++;
       const t = this._transform;
@@ -18285,6 +18812,16 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Adds an arc to the current path with the given control points and radius, connected to the previous point
+     * by a straight line if necessary.
+     * @param x1 - The x-coordinate of the first control point.
+     * @param y1 - The y-coordinate of the first control point.
+     * @param x2 - The x-coordinate of the second control point.
+     * @param y2 - The y-coordinate of the second control point.
+     * @param radius - The arc's radius.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     arcTo(x1, y1, x2, y2, radius) {
       this._tick++;
       const t = this._transform;
@@ -18297,6 +18834,18 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Adds an SVG-style arc to the path, allowing for elliptical arcs based on the SVG spec.
+     * @param rx - The x-radius of the ellipse.
+     * @param ry - The y-radius of the ellipse.
+     * @param xAxisRotation - The rotation of the ellipse's x-axis relative
+     * to the x-axis of the coordinate system, in degrees.
+     * @param largeArcFlag - Determines if the arc should be greater than or less than 180 degrees.
+     * @param sweepFlag - Determines if the arc should be swept in a positive angle direction.
+     * @param x - The x-coordinate of the arc's end point.
+     * @param y - The y-coordinate of the arc's end point.
+     * @returns The instance of the current object for chaining.
+     */
     arcToSvg(rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x, y) {
       this._tick++;
       const t = this._transform;
@@ -18312,6 +18861,19 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Adds a cubic Bezier curve to the path.
+     * It requires three points: the first two are control points and the third one is the end point.
+     * The starting point is the last point in the current path.
+     * @param cp1x - The x-coordinate of the first control point.
+     * @param cp1y - The y-coordinate of the first control point.
+     * @param cp2x - The x-coordinate of the second control point.
+     * @param cp2y - The y-coordinate of the second control point.
+     * @param x - The x-coordinate of the end point.
+     * @param y - The y-coordinate of the end point.
+     * @param smoothness - Optional parameter to adjust the smoothness of the curve.
+     * @returns The instance of the current object for chaining.
+     */
     bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y, smoothness) {
       this._tick++;
       const t = this._transform;
@@ -18326,27 +18888,59 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Closes the current path by drawing a straight line back to the start.
+     * If the shape is already closed or there are no points in the path, this method does nothing.
+     * @returns The instance of the current object for chaining.
+     */
     closePath() {
       var _a;
       this._tick++;
       (_a = this._activePath) == null ? void 0 : _a.closePath();
       return this;
     }
+    /**
+     * Draws an ellipse at the specified location and with the given x and y radii.
+     * An optional transformation can be applied, allowing for rotation, scaling, and translation.
+     * @param x - The x-coordinate of the center of the ellipse.
+     * @param y - The y-coordinate of the center of the ellipse.
+     * @param radiusX - The horizontal radius of the ellipse.
+     * @param radiusY - The vertical radius of the ellipse.
+     * @returns The instance of the current object for chaining.
+     */
     ellipse(x, y, radiusX, radiusY) {
       this._tick++;
       this._activePath.ellipse(x, y, radiusX, radiusY, this._transform.clone());
       return this;
     }
+    /**
+     * Draws a circle shape. This method adds a new circle path to the current drawing.
+     * @param x - The x-coordinate of the center of the circle.
+     * @param y - The y-coordinate of the center of the circle.
+     * @param radius - The radius of the circle.
+     * @returns The instance of the current object for chaining.
+     */
     circle(x, y, radius) {
       this._tick++;
       this._activePath.circle(x, y, radius, this._transform.clone());
       return this;
     }
+    /**
+     * Adds another `GraphicsPath` to this path, optionally applying a transformation.
+     * @param path - The `GraphicsPath` to add.
+     * @returns The instance of the current object for chaining.
+     */
     path(path) {
       this._tick++;
       this._activePath.addPath(path, this._transform.clone());
       return this;
     }
+    /**
+     * Connects the current point to a new point with a straight line. This method updates the current path.
+     * @param x - The x-coordinate of the new point to connect to.
+     * @param y - The y-coordinate of the new point to connect to.
+     * @returns The instance of the current object for chaining.
+     */
     lineTo(x, y) {
       this._tick++;
       const t = this._transform;
@@ -18356,6 +18950,12 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Sets the starting point for a new sub-path. Any subsequent drawing commands are considered part of this path.
+     * @param x - The x-coordinate for the starting point.
+     * @param y - The y-coordinate for the starting point.
+     * @returns The instance of the current object for chaining.
+     */
     moveTo(x, y) {
       this._tick++;
       const t = this._transform;
@@ -18373,6 +18973,16 @@ Deprecated since v${version}`);
       );
       return this;
     }
+    /**
+     * Adds a quadratic curve to the path. It requires two points: the control point and the end point.
+     * The starting point is the last point in the current path.
+     * @param cpx - The x-coordinate of the control point.
+     * @param cpy - The y-coordinate of the control point.
+     * @param x - The x-coordinate of the end point.
+     * @param y - The y-coordinate of the end point.
+     * @param smoothness - Optional parameter to adjust the smoothness of the curve.
+     * @returns The instance of the current object for chaining.
+     */
     quadraticCurveTo(cpx, cpy, x, y, smoothness) {
       this._tick++;
       const t = this._transform;
@@ -18384,55 +18994,159 @@ Deprecated since v${version}`);
         smoothness
       );
     }
+    /**
+     * Draws a rectangle shape. This method adds a new rectangle path to the current drawing.
+     * @param x - The x-coordinate of the top-left corner of the rectangle.
+     * @param y - The y-coordinate of the top-left corner of the rectangle.
+     * @param w - The width of the rectangle.
+     * @param h - The height of the rectangle.
+     * @returns The instance of the current object for chaining.
+     */
     rect(x, y, w, h) {
       this._tick++;
       this._activePath.rect(x, y, w, h, this._transform.clone());
       return this;
     }
+    /**
+     * Draws a rectangle with rounded corners.
+     * The corner radius can be specified to determine how rounded the corners should be.
+     * An optional transformation can be applied, which allows for rotation, scaling, and translation of the rectangle.
+     * @param x - The x-coordinate of the top-left corner of the rectangle.
+     * @param y - The y-coordinate of the top-left corner of the rectangle.
+     * @param w - The width of the rectangle.
+     * @param h - The height of the rectangle.
+     * @param radius - The radius of the rectangle's corners. If not specified, corners will be sharp.
+     * @returns The instance of the current object for chaining.
+     */
     roundRect(x, y, w, h, radius) {
       this._tick++;
       this._activePath.roundRect(x, y, w, h, radius, this._transform.clone());
       return this;
     }
+    /**
+     * Draws a polygon shape by specifying a sequence of points. This method allows for the creation of complex polygons,
+     * which can be both open and closed. An optional transformation can be applied, enabling the polygon to be scaled,
+     * rotated, or translated as needed.
+     * @param points - An array of numbers representing the x and y coordinates of the polygon's vertices, in sequence.
+     * @param close - A boolean indicating whether to close the polygon path. True by default.
+     * @returns The instance of the current object for chaining further drawing commands.
+     */
     poly(points, close) {
       this._tick++;
       this._activePath.poly(points, close, this._transform.clone());
       return this;
     }
+    /**
+     * Draws a regular polygon with a specified number of sides. All sides and angles are equal.
+     * @param x - The x-coordinate of the center of the polygon.
+     * @param y - The y-coordinate of the center of the polygon.
+     * @param radius - The radius of the circumscribed circle of the polygon.
+     * @param sides - The number of sides of the polygon. Must be 3 or more.
+     * @param rotation - The rotation angle of the polygon, in radians. Zero by default.
+     * @param transform - An optional `Matrix` object to apply a transformation to the polygon.
+     * @returns The instance of the current object for chaining.
+     */
     regularPoly(x, y, radius, sides, rotation = 0, transform) {
       this._tick++;
       this._activePath.regularPoly(x, y, radius, sides, rotation, transform);
       return this;
     }
+    /**
+     * Draws a polygon with rounded corners.
+     * Similar to `regularPoly` but with the ability to round the corners of the polygon.
+     * @param x - The x-coordinate of the center of the polygon.
+     * @param y - The y-coordinate of the center of the polygon.
+     * @param radius - The radius of the circumscribed circle of the polygon.
+     * @param sides - The number of sides of the polygon. Must be 3 or more.
+     * @param corner - The radius of the rounding of the corners.
+     * @param rotation - The rotation angle of the polygon, in radians. Zero by default.
+     * @returns The instance of the current object for chaining.
+     */
     roundPoly(x, y, radius, sides, corner, rotation) {
       this._tick++;
       this._activePath.roundPoly(x, y, radius, sides, corner, rotation);
       return this;
     }
+    /**
+     * Draws a shape with rounded corners. This function supports custom radius for each corner of the shape.
+     * Optionally, corners can be rounded using a quadratic curve instead of an arc, providing a different aesthetic.
+     * @param points - An array of `RoundedPoint` representing the corners of the shape to draw.
+     * A minimum of 3 points is required.
+     * @param radius - The default radius for the corners.
+     * This radius is applied to all corners unless overridden in `points`.
+     * @param useQuadratic - If set to true, rounded corners are drawn using a quadraticCurve
+     *  method instead of an arc method. Defaults to false.
+     * @param smoothness - Specifies the smoothness of the curve when `useQuadratic` is true.
+     * Higher values make the curve smoother.
+     * @returns The instance of the current object for chaining.
+     */
     roundShape(points, radius, useQuadratic, smoothness) {
       this._tick++;
       this._activePath.roundShape(points, radius, useQuadratic, smoothness);
       return this;
     }
+    /**
+     * Draw Rectangle with fillet corners. This is much like rounded rectangle
+     * however it support negative numbers as well for the corner radius.
+     * @param x - Upper left corner of rect
+     * @param y - Upper right corner of rect
+     * @param width - Width of rect
+     * @param height - Height of rect
+     * @param fillet - accept negative or positive values
+     */
     filletRect(x, y, width, height, fillet) {
       this._tick++;
       this._activePath.filletRect(x, y, width, height, fillet);
       return this;
     }
+    /**
+     * Draw Rectangle with chamfer corners. These are angled corners.
+     * @param x - Upper left corner of rect
+     * @param y - Upper right corner of rect
+     * @param width - Width of rect
+     * @param height - Height of rect
+     * @param chamfer - non-zero real number, size of corner cutout
+     * @param transform
+     */
     chamferRect(x, y, width, height, chamfer, transform) {
       this._tick++;
       this._activePath.chamferRect(x, y, width, height, chamfer, transform);
       return this;
     }
+    /**
+     * Draws a star shape centered at a specified location. This method allows for the creation
+     *  of stars with a variable number of points, outer radius, optional inner radius, and rotation.
+     * The star is drawn as a closed polygon with alternating outer and inner vertices to create the star's points.
+     * An optional transformation can be applied to scale, rotate, or translate the star as needed.
+     * @param x - The x-coordinate of the center of the star.
+     * @param y - The y-coordinate of the center of the star.
+     * @param points - The number of points of the star.
+     * @param radius - The outer radius of the star (distance from the center to the outer points).
+     * @param innerRadius - Optional. The inner radius of the star
+     * (distance from the center to the inner points between the outer points).
+     * If not provided, defaults to half of the `radius`.
+     * @param rotation - Optional. The rotation of the star in radians, where 0 is aligned with the y-axis.
+     * Defaults to 0, meaning one point is directly upward.
+     * @returns The instance of the current object for chaining further drawing commands.
+     */
     star(x, y, points, radius, innerRadius = 0, rotation = 0) {
       this._tick++;
       this._activePath.star(x, y, points, radius, innerRadius, rotation, this._transform.clone());
       return this;
     }
+    /**
+     * Parses and renders an SVG string into the graphics context. This allows for complex shapes and paths
+     * defined in SVG format to be drawn within the graphics context.
+     * @param svg - The SVG string to be parsed and rendered.
+     */
     svg(svg) {
       this._tick++;
       SVGParser(svg, this);
     }
+    /**
+     * Restores the most recently saved graphics state by popping the top of the graphics state stack.
+     * This includes transformations, fill styles, and stroke styles.
+     */
     restore() {
       const state = this._stateStack.pop();
       if (state) {
@@ -18441,6 +19155,7 @@ Deprecated since v${version}`);
         this._strokeStyle = state.strokeStyle;
       }
     }
+    /** Saves the current graphics state, including transformations, fill styles, and stroke styles, onto a stack. */
     save() {
       this._stateStack.push({
         transform: this._transform.clone(),
@@ -18448,17 +19163,36 @@ Deprecated since v${version}`);
         strokeStyle: __spreadValues$P({}, this._strokeStyle)
       });
     }
+    /**
+     * Returns the current transformation matrix of the graphics context.
+     * @returns The current transformation matrix.
+     */
     getTransform() {
       return this._transform;
     }
+    /**
+     * Resets the current transformation matrix to the identity matrix, effectively removing any transformations (rotation, scaling, translation) previously applied.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     resetTransform() {
       this._transform.identity();
       return this;
     }
+    /**
+     * Applies a rotation transformation to the graphics context around the current origin.
+     * @param angle - The angle of rotation in radians.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     rotate(angle) {
       this._transform.rotate(angle);
       return this;
     }
+    /**
+     * Applies a scaling transformation to the graphics context, scaling drawings by x horizontally and by y vertically.
+     * @param x - The scale factor in the horizontal direction.
+     * @param y - (Optional) The scale factor in the vertical direction. If not specified, the x value is used for both directions.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     scale(x, y = x) {
       this._transform.scale(x, y);
       return this;
@@ -18480,10 +19214,21 @@ Deprecated since v${version}`);
       this._transform.append(tempMatrix$2);
       return this;
     }
+    /**
+     * Applies a translation transformation to the graphics context, moving the origin by the specified amounts.
+     * @param x - The amount to translate in the horizontal direction.
+     * @param y - (Optional) The amount to translate in the vertical direction. If not specified, the x value is used for both directions.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     translate(x, y = x) {
       this._transform.translate(x, y);
       return this;
     }
+    /**
+     * Clears all drawing commands from the graphics context, effectively resetting it. This includes clearing the path,
+     * and optionally resetting transformations to the identity matrix.
+     * @returns The instance of the current GraphicsContext for method chaining.
+     */
     clear() {
       this.instructions.length = 0;
       this.resetTransform();
@@ -18497,6 +19242,7 @@ Deprecated since v${version}`);
       this.dirty = true;
       this._boundsDirty = true;
     }
+    /** The bounds of the graphic shape. */
     get bounds() {
       if (!this._boundsDirty)
         return this._bounds;
@@ -18606,23 +19352,40 @@ Deprecated since v${version}`);
       this._transform = null;
     }
   };
+  /** The default fill style to use when none is provided. */
   _GraphicsContext.defaultFillStyle = {
+    /** The color to use for the fill. */
     color: 16777215,
+    /** The alpha value to use for the fill. */
     alpha: 1,
+    /** The texture to use for the fill. */
     texture: Texture.WHITE,
+    /** The matrix to apply. */
     matrix: null,
+    /** The fill pattern to use. */
     fill: null
   };
+  /** The default stroke style to use when none is provided. */
   _GraphicsContext.defaultStrokeStyle = {
+    /** The width of the stroke. */
     width: 1,
+    /** The color to use for the stroke. */
     color: 16777215,
+    /** The alpha value to use for the stroke. */
     alpha: 1,
+    /** The alignment of the stroke. */
     alignment: 0.5,
+    /** The miter limit to use. */
     miterLimit: 10,
+    /** The line cap style to use. */
     cap: "butt",
+    /** The line join style to use. */
     join: "miter",
+    /** The texture to use for the fill. */
     texture: Texture.WHITE,
+    /** The matrix to apply. */
     matrix: null,
+    /** The fill pattern to use. */
     fill: null
   };
   let GraphicsContext = _GraphicsContext;
@@ -18912,6 +19675,7 @@ Deprecated since v${version}`);
       this._styleKey = null;
       this.emit("update", this);
     }
+    /** Resets all properties to the default values */
     reset() {
       const defaultStyle = _TextStyle.defaultTextStyle;
       for (const key in defaultStyle) {
@@ -18980,13 +19744,20 @@ Deprecated since v${version}`);
       this._originalFill = null;
     }
   };
+  /** The default drop shadow settings */
   _TextStyle.defaultDropShadow = {
+    /** Set alpha for the drop shadow */
     alpha: 1,
+    /** Set a angle of the drop shadow */
     angle: Math.PI / 6,
+    /** Set a shadow blur radius */
     blur: 0,
+    /** A fill style to be used on the  e.g., 'red', '#00FF00' */
     color: "black",
+    /** Set a distance of the drop shadow */
     distance: 5
   };
+  /** The default text style settings */
   _TextStyle.defaultTextStyle = {
     /**
      * See {@link TextStyle.align}
@@ -19132,12 +19903,18 @@ Deprecated since v${version}`);
 
   "use strict";
   class DynamicBitmapFont extends AbstractBitmapFont {
+    /**
+     * @param options - The options for the dynamic bitmap font.
+     */
     constructor(options) {
       var _a, _b, _c;
       super();
-      // this is a resolution modifier for the font size..
-      // texture resolution will also be used to scale texture according to its font size also
+      /**
+       * this is a resolution modifier for the font size..
+       * texture resolution will also be used to scale texture according to its font size also
+       */
       this.resolution = 1;
+      /** The pages of the font. */
       this.pages = [];
       this._padding = 4;
       this._measureCache = /* @__PURE__ */ Object.create(null);
@@ -19571,6 +20348,7 @@ Deprecated since v${version}`);
        * @see http://www.asciitable.com/
        */
       this.ASCII = [[" ", "~"]];
+      /** Default options for installing a new BitmapFont. */
       this.defaultOptions = {
         chars: this.ALPHANUMERIC,
         resolution: 1,
@@ -19578,6 +20356,11 @@ Deprecated since v${version}`);
         skipKerning: false
       };
     }
+    /**
+     * Get a font for the specified text and style.
+     * @param text - The text to get the font for
+     * @param style - The style to use
+     */
     getFont(text, style) {
       var _a;
       let fontFamilyKey = `${style.fontFamily}-bitmap`;
@@ -19602,10 +20385,20 @@ Deprecated since v${version}`);
       (_a = dynamicFont.ensureCharacters) == null ? void 0 : _a.call(dynamicFont, text);
       return dynamicFont;
     }
+    /**
+     * Get the layout of a text for the specified style.
+     * @param text - The text to get the layout for
+     * @param style - The style to use
+     */
     getLayout(text, style) {
       const bitmapFont = this.getFont(text, style);
       return getBitmapTextLayout(text.split(""), style, bitmapFont);
     }
+    /**
+     * Measure the text using the specified style.
+     * @param text - The text to measure
+     * @param style - The style to use
+     */
     measureText(text, style) {
       return this.getLayout(text, style);
     }
@@ -19711,6 +20504,7 @@ Deprecated since v${version}`);
       };
       this.url = url;
     }
+    /** Destroys the BitmapFont object. */
     destroy() {
       super.destroy();
       for (let i = 0; i < this.pages.length; i++) {
@@ -20045,16 +20839,31 @@ Deprecated since v${version}`);
     get context() {
       return this._context;
     }
+    /**
+     * The local bounds of the graphic.
+     * @type {rendering.Bounds}
+     */
     get bounds() {
       return this._context.bounds;
     }
+    /**
+     * Adds the bounds of this object to the bounds object.
+     * @param bounds - The output bounds object.
+     */
     addBounds(bounds) {
       bounds.addBounds(this._context.bounds);
     }
+    /**
+     * Checks if the object contains the given point.
+     * @param point - The point to check
+     */
     containsPoint(point) {
       return this._context.containsPoint(point);
     }
-    /** Whether or not to round the x/y position. */
+    /**
+     *  Whether or not to round the x/y position of the graphic.
+     * @type {boolean}
+     */
     get roundPixels() {
       return !!this._roundPixels;
     }
@@ -20257,7 +21066,7 @@ Deprecated since v${version}`);
      * @param width
      * @param color
      * @param alpha
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#setStrokeStyle} instead
      */
     lineStyle(width, color, alpha) {
       deprecation(v8_0_0, "Graphics#lineStyle is no longer needed. Use Graphics#setStrokeStyle to set the stroke style.");
@@ -20271,7 +21080,7 @@ Deprecated since v${version}`);
     /**
      * @param color
      * @param alpha
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#fill} instead
      */
     beginFill(color, alpha) {
       deprecation(v8_0_0, "Graphics#beginFill is no longer needed. Use Graphics#fill to fill the shape with the desired style.");
@@ -20282,7 +21091,7 @@ Deprecated since v${version}`);
       return this;
     }
     /**
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#fill} instead
      */
     endFill() {
       deprecation(v8_0_0, "Graphics#endFill is no longer needed. Use Graphics#fill to fill the shape with the desired style.");
@@ -20295,7 +21104,7 @@ Deprecated since v${version}`);
     }
     /**
      * @param {...any} args
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#circle} instead
      */
     drawCircle(...args) {
       deprecation(v8_0_0, "Graphics#drawCircle has been renamed to Graphics#circle");
@@ -20303,7 +21112,7 @@ Deprecated since v${version}`);
     }
     /**
      * @param {...any} args
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#ellipse} instead
      */
     drawEllipse(...args) {
       deprecation(v8_0_0, "Graphics#drawEllipse has been renamed to Graphics#ellipse");
@@ -20311,7 +21120,7 @@ Deprecated since v${version}`);
     }
     /**
      * @param {...any} args
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#poly} instead
      */
     drawPolygon(...args) {
       deprecation(v8_0_0, "Graphics#drawPolygon has been renamed to Graphics#poly");
@@ -20319,7 +21128,7 @@ Deprecated since v${version}`);
     }
     /**
      * @param {...any} args
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#rect} instead
      */
     drawRect(...args) {
       deprecation(v8_0_0, "Graphics#drawRect has been renamed to Graphics#rect");
@@ -20327,7 +21136,7 @@ Deprecated since v${version}`);
     }
     /**
      * @param {...any} args
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#roundRect} instead
      */
     drawRoundedRect(...args) {
       deprecation(v8_0_0, "Graphics#drawRoundedRect has been renamed to Graphics#roundRect");
@@ -20335,7 +21144,7 @@ Deprecated since v${version}`);
     }
     /**
      * @param {...any} args
-     * @deprecated since 8.0.0
+     * @deprecated since 8.0.0 Use {@link Graphics#star} instead
      */
     drawStar(...args) {
       deprecation(v8_0_0, "Graphics#drawStar has been renamed to Graphics#star");
@@ -20758,7 +21567,10 @@ ${src}`;
      * @param options - The options for the gpu program
      */
     constructor(options) {
-      /** @internal */
+      /**
+       * @internal
+       * @ignore
+       */
       this._layoutKey = 0;
       var _a, _b;
       const { fragment, vertex, layout, gpuLayout, name } = options;
@@ -22468,18 +23280,21 @@ ${parts.join("\n")}
       });
       this.batchMode = "auto";
     }
+    /** The positions of the mesh. */
     get positions() {
       return this.attributes.aPosition.buffer.data;
     }
     set positions(value) {
       this.attributes.aPosition.buffer.data = value;
     }
+    /** The UVs of the mesh. */
     get uvs() {
       return this.attributes.aUV.buffer.data;
     }
     set uvs(value) {
       this.attributes.aUV.buffer.data = value;
     }
+    /** The indices of the mesh. */
     get indices() {
       return this.indexBuffer.data;
     }
@@ -23110,6 +23925,10 @@ ${parts.join("\n")}
       this._textureMatrix = new Matrix();
       this.update(options);
     }
+    /**
+     * Updates the NineSliceGeometry with the options.
+     * @param options - The options of the NineSliceGeometry.
+     */
     update(options) {
       var _a, _b, _c, _d, _e, _f, _g, _h;
       this.width = (_a = options.width) != null ? _a : this.width;
@@ -23126,6 +23945,7 @@ ${parts.join("\n")}
       this.updateUvs();
       this.updatePositions();
     }
+    /** Updates the positions of the vertices. */
     updatePositions() {
       const positions = this.positions;
       const w = this._leftWidth + this._rightWidth;
@@ -23141,6 +23961,7 @@ ${parts.join("\n")}
       positions[6] = positions[14] = positions[22] = positions[30] = this.width;
       this.getBuffer("aPosition").update();
     }
+    /** Updates the UVs of the vertices. */
     updateUvs() {
       const textureMatrix = this._textureMatrix;
       const uvs = this.uvs;
@@ -23158,14 +23979,23 @@ ${parts.join("\n")}
       this.getBuffer("aUV").update();
     }
   };
+  /** The default options for the NineSliceGeometry. */
   _NineSliceGeometry.defaultOptions = {
+    /** The width of the NineSlicePlane, setting this will actually modify the vertices and UV's of this plane. */
     width: 100,
+    /** The height of the NineSlicePlane, setting this will actually modify the vertices and UV's of this plane. */
     height: 100,
+    /** The width of the left column. */
     leftWidth: 10,
+    /** The height of the top row. */
     topHeight: 10,
+    /** The width of the right column. */
     rightWidth: 10,
+    /** The height of the bottom row. */
     bottomHeight: 10,
+    /** The original width of the texture */
     originalWidth: 100,
+    /** The original height of the texture */
     originalHeight: 100
   };
   let NineSliceGeometry = _NineSliceGeometry;
@@ -23412,6 +24242,14 @@ ${parts.join("\n")}
       this._globalFilterBindGroup = new BindGroup({});
       this.renderer = renderer;
     }
+    /**
+     * The back texture of the currently active filter. Requires the filter to have `blendRequired` set to true.
+     * @readonly
+     */
+    get activeBackTexture() {
+      var _a;
+      return (_a = this._activeFilterData) == null ? void 0 : _a.backTexture;
+    }
     push(instruction) {
       var _a, _b;
       const renderer = this.renderer;
@@ -23562,7 +24400,8 @@ ${parts.join("\n")}
         lastRenderSurface,
         backTexture,
         { x, y },
-        { width, height }
+        { width, height },
+        { x: 0, y: 0 }
       );
       return backTexture;
     }
@@ -23990,7 +24829,10 @@ ${parts.join("\n")}
       return this.view.texture.frame.height;
     }
     // NOTE: this was `view` in v7
-    /** The canvas element that everything is drawn to.*/
+    /**
+     * The canvas element that everything is drawn to.
+     * @type {environment.ICanvas}
+     */
     get canvas() {
       return this.view.canvas;
     }
@@ -24014,7 +24856,6 @@ ${parts.join("\n")}
      * Measurements of the screen. (0, 0, screenWidth, screenHeight).
      *
      * Its safe to use as filterArea or hitArea for the whole stage.
-     * @member {Rectangle}
      */
     get screen() {
       return this.view.screen;
@@ -24081,7 +24922,7 @@ ${parts.join("\n")}
       this.renderPipes = null;
     }
     /**
-     * @deprecated since 8.0.0
+     * Generate a texture from a container.
      * @param options - options or container target to use when generating the texture
      * @returns a texture
      */
@@ -24107,6 +24948,7 @@ ${parts.join("\n")}
       }
     }
   };
+  /** The default options for the renderer. */
   _AbstractRenderer.defaultOptions = {
     /**
      * Default resolution / device pixel ratio of the renderer.
@@ -24280,10 +25122,7 @@ ${parts.join("\n")}
   const _Application = class _Application {
     /** @ignore */
     constructor(...args) {
-      /**
-       * The root display container that's rendered.
-       * @member {Container}
-       */
+      /** The root display container that's rendered. */
       this.stage = new Container();
       if (args[0] !== void 0) {
         deprecation(v8_0_0, "Application constructor options are deprecated, please use Application.init() instead.");
@@ -24306,12 +25145,14 @@ ${parts.join("\n")}
     /**
      * Reference to the renderer's canvas element.
      * @readonly
+     * @member {HTMLCanvasElement}
      */
     get canvas() {
       return this.renderer.canvas;
     }
     /**
      * Reference to the renderer's canvas element.
+     * @member {HTMLCanvasElement}
      * @deprecated since 8.0.0
      */
     get view() {
@@ -24320,7 +25161,6 @@ ${parts.join("\n")}
     }
     /**
      * Reference to the renderer's screen rectangle. Its safe to use as `filterArea` or `hitArea` for the whole screen.
-     * @member {Rectangle}
      * @readonly
      */
     get screen() {
@@ -25941,6 +26781,12 @@ ${e}`);
         "bc2-rgba-unorm-srgb",
         "bc3-rgba-unorm-srgb"
       ] : [],
+      ...gl.getExtension("EXT_texture_compression_rgtc") ? [
+        "bc4-r-unorm",
+        "bc4-r-snorm",
+        "bc5-rg-unorm",
+        "bc5-rg-snorm"
+      ] : [],
       // ETC2 compressed formats usable if "texture-compression-etc2" is both
       // supported by the device/user agent and enabled in requestDevice.
       ...gl.getExtension("WEBGL_compressed_texture_etc") ? [
@@ -26289,108 +27135,345 @@ ${e}`);
   }
 
   "use strict";
-  const DDS_MAGIC = 542327876;
-  const DDSD_MIPMAPCOUNT = 131072;
-  const DDPF_FOURCC = 4;
+  const DDS_HEADER_FIELDS = {
+    MAGIC: 0,
+    SIZE: 1,
+    FLAGS: 2,
+    HEIGHT: 3,
+    WIDTH: 4,
+    MIPMAP_COUNT: 7,
+    PIXEL_FORMAT: 19,
+    PF_FLAGS: 20,
+    FOURCC: 21,
+    RGB_BITCOUNT: 22,
+    R_BIT_MASK: 23,
+    G_BIT_MASK: 24,
+    B_BIT_MASK: 25,
+    A_BIT_MASK: 26
+  };
+  const DDS_DX10_FIELDS = {
+    DXGI_FORMAT: 0,
+    RESOURCE_DIMENSION: 1,
+    MISC_FLAG: 2,
+    ARRAY_SIZE: 3,
+    MISC_FLAGS2: 4
+  };
+  var DXGI_FORMAT = /* @__PURE__ */ ((DXGI_FORMAT2) => {
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_UNKNOWN"] = 0] = "DXGI_FORMAT_UNKNOWN";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32B32A32_TYPELESS"] = 1] = "DXGI_FORMAT_R32G32B32A32_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32B32A32_FLOAT"] = 2] = "DXGI_FORMAT_R32G32B32A32_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32B32A32_UINT"] = 3] = "DXGI_FORMAT_R32G32B32A32_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32B32A32_SINT"] = 4] = "DXGI_FORMAT_R32G32B32A32_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32B32_TYPELESS"] = 5] = "DXGI_FORMAT_R32G32B32_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32B32_FLOAT"] = 6] = "DXGI_FORMAT_R32G32B32_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32B32_UINT"] = 7] = "DXGI_FORMAT_R32G32B32_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32B32_SINT"] = 8] = "DXGI_FORMAT_R32G32B32_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16B16A16_TYPELESS"] = 9] = "DXGI_FORMAT_R16G16B16A16_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16B16A16_FLOAT"] = 10] = "DXGI_FORMAT_R16G16B16A16_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16B16A16_UNORM"] = 11] = "DXGI_FORMAT_R16G16B16A16_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16B16A16_UINT"] = 12] = "DXGI_FORMAT_R16G16B16A16_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16B16A16_SNORM"] = 13] = "DXGI_FORMAT_R16G16B16A16_SNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16B16A16_SINT"] = 14] = "DXGI_FORMAT_R16G16B16A16_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32_TYPELESS"] = 15] = "DXGI_FORMAT_R32G32_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32_FLOAT"] = 16] = "DXGI_FORMAT_R32G32_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32_UINT"] = 17] = "DXGI_FORMAT_R32G32_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G32_SINT"] = 18] = "DXGI_FORMAT_R32G32_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32G8X24_TYPELESS"] = 19] = "DXGI_FORMAT_R32G8X24_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_D32_FLOAT_S8X24_UINT"] = 20] = "DXGI_FORMAT_D32_FLOAT_S8X24_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS"] = 21] = "DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_X32_TYPELESS_G8X24_UINT"] = 22] = "DXGI_FORMAT_X32_TYPELESS_G8X24_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R10G10B10A2_TYPELESS"] = 23] = "DXGI_FORMAT_R10G10B10A2_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R10G10B10A2_UNORM"] = 24] = "DXGI_FORMAT_R10G10B10A2_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R10G10B10A2_UINT"] = 25] = "DXGI_FORMAT_R10G10B10A2_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R11G11B10_FLOAT"] = 26] = "DXGI_FORMAT_R11G11B10_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8B8A8_TYPELESS"] = 27] = "DXGI_FORMAT_R8G8B8A8_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8B8A8_UNORM"] = 28] = "DXGI_FORMAT_R8G8B8A8_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8B8A8_UNORM_SRGB"] = 29] = "DXGI_FORMAT_R8G8B8A8_UNORM_SRGB";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8B8A8_UINT"] = 30] = "DXGI_FORMAT_R8G8B8A8_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8B8A8_SNORM"] = 31] = "DXGI_FORMAT_R8G8B8A8_SNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8B8A8_SINT"] = 32] = "DXGI_FORMAT_R8G8B8A8_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16_TYPELESS"] = 33] = "DXGI_FORMAT_R16G16_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16_FLOAT"] = 34] = "DXGI_FORMAT_R16G16_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16_UNORM"] = 35] = "DXGI_FORMAT_R16G16_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16_UINT"] = 36] = "DXGI_FORMAT_R16G16_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16_SNORM"] = 37] = "DXGI_FORMAT_R16G16_SNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16G16_SINT"] = 38] = "DXGI_FORMAT_R16G16_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32_TYPELESS"] = 39] = "DXGI_FORMAT_R32_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_D32_FLOAT"] = 40] = "DXGI_FORMAT_D32_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32_FLOAT"] = 41] = "DXGI_FORMAT_R32_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32_UINT"] = 42] = "DXGI_FORMAT_R32_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R32_SINT"] = 43] = "DXGI_FORMAT_R32_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R24G8_TYPELESS"] = 44] = "DXGI_FORMAT_R24G8_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_D24_UNORM_S8_UINT"] = 45] = "DXGI_FORMAT_D24_UNORM_S8_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R24_UNORM_X8_TYPELESS"] = 46] = "DXGI_FORMAT_R24_UNORM_X8_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_X24_TYPELESS_G8_UINT"] = 47] = "DXGI_FORMAT_X24_TYPELESS_G8_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8_TYPELESS"] = 48] = "DXGI_FORMAT_R8G8_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8_UNORM"] = 49] = "DXGI_FORMAT_R8G8_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8_UINT"] = 50] = "DXGI_FORMAT_R8G8_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8_SNORM"] = 51] = "DXGI_FORMAT_R8G8_SNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8_SINT"] = 52] = "DXGI_FORMAT_R8G8_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16_TYPELESS"] = 53] = "DXGI_FORMAT_R16_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16_FLOAT"] = 54] = "DXGI_FORMAT_R16_FLOAT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_D16_UNORM"] = 55] = "DXGI_FORMAT_D16_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16_UNORM"] = 56] = "DXGI_FORMAT_R16_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16_UINT"] = 57] = "DXGI_FORMAT_R16_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16_SNORM"] = 58] = "DXGI_FORMAT_R16_SNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R16_SINT"] = 59] = "DXGI_FORMAT_R16_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8_TYPELESS"] = 60] = "DXGI_FORMAT_R8_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8_UNORM"] = 61] = "DXGI_FORMAT_R8_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8_UINT"] = 62] = "DXGI_FORMAT_R8_UINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8_SNORM"] = 63] = "DXGI_FORMAT_R8_SNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8_SINT"] = 64] = "DXGI_FORMAT_R8_SINT";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_A8_UNORM"] = 65] = "DXGI_FORMAT_A8_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R1_UNORM"] = 66] = "DXGI_FORMAT_R1_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R9G9B9E5_SHAREDEXP"] = 67] = "DXGI_FORMAT_R9G9B9E5_SHAREDEXP";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R8G8_B8G8_UNORM"] = 68] = "DXGI_FORMAT_R8G8_B8G8_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_G8R8_G8B8_UNORM"] = 69] = "DXGI_FORMAT_G8R8_G8B8_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC1_TYPELESS"] = 70] = "DXGI_FORMAT_BC1_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC1_UNORM"] = 71] = "DXGI_FORMAT_BC1_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC1_UNORM_SRGB"] = 72] = "DXGI_FORMAT_BC1_UNORM_SRGB";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC2_TYPELESS"] = 73] = "DXGI_FORMAT_BC2_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC2_UNORM"] = 74] = "DXGI_FORMAT_BC2_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC2_UNORM_SRGB"] = 75] = "DXGI_FORMAT_BC2_UNORM_SRGB";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC3_TYPELESS"] = 76] = "DXGI_FORMAT_BC3_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC3_UNORM"] = 77] = "DXGI_FORMAT_BC3_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC3_UNORM_SRGB"] = 78] = "DXGI_FORMAT_BC3_UNORM_SRGB";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC4_TYPELESS"] = 79] = "DXGI_FORMAT_BC4_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC4_UNORM"] = 80] = "DXGI_FORMAT_BC4_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC4_SNORM"] = 81] = "DXGI_FORMAT_BC4_SNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC5_TYPELESS"] = 82] = "DXGI_FORMAT_BC5_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC5_UNORM"] = 83] = "DXGI_FORMAT_BC5_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC5_SNORM"] = 84] = "DXGI_FORMAT_BC5_SNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B5G6R5_UNORM"] = 85] = "DXGI_FORMAT_B5G6R5_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B5G5R5A1_UNORM"] = 86] = "DXGI_FORMAT_B5G5R5A1_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B8G8R8A8_UNORM"] = 87] = "DXGI_FORMAT_B8G8R8A8_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B8G8R8X8_UNORM"] = 88] = "DXGI_FORMAT_B8G8R8X8_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM"] = 89] = "DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B8G8R8A8_TYPELESS"] = 90] = "DXGI_FORMAT_B8G8R8A8_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B8G8R8A8_UNORM_SRGB"] = 91] = "DXGI_FORMAT_B8G8R8A8_UNORM_SRGB";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B8G8R8X8_TYPELESS"] = 92] = "DXGI_FORMAT_B8G8R8X8_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B8G8R8X8_UNORM_SRGB"] = 93] = "DXGI_FORMAT_B8G8R8X8_UNORM_SRGB";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC6H_TYPELESS"] = 94] = "DXGI_FORMAT_BC6H_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC6H_UF16"] = 95] = "DXGI_FORMAT_BC6H_UF16";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC6H_SF16"] = 96] = "DXGI_FORMAT_BC6H_SF16";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC7_TYPELESS"] = 97] = "DXGI_FORMAT_BC7_TYPELESS";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC7_UNORM"] = 98] = "DXGI_FORMAT_BC7_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_BC7_UNORM_SRGB"] = 99] = "DXGI_FORMAT_BC7_UNORM_SRGB";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_AYUV"] = 100] = "DXGI_FORMAT_AYUV";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_Y410"] = 101] = "DXGI_FORMAT_Y410";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_Y416"] = 102] = "DXGI_FORMAT_Y416";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_NV12"] = 103] = "DXGI_FORMAT_NV12";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_P010"] = 104] = "DXGI_FORMAT_P010";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_P016"] = 105] = "DXGI_FORMAT_P016";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_420_OPAQUE"] = 106] = "DXGI_FORMAT_420_OPAQUE";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_YUY2"] = 107] = "DXGI_FORMAT_YUY2";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_Y210"] = 108] = "DXGI_FORMAT_Y210";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_Y216"] = 109] = "DXGI_FORMAT_Y216";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_NV11"] = 110] = "DXGI_FORMAT_NV11";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_AI44"] = 111] = "DXGI_FORMAT_AI44";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_IA44"] = 112] = "DXGI_FORMAT_IA44";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_P8"] = 113] = "DXGI_FORMAT_P8";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_A8P8"] = 114] = "DXGI_FORMAT_A8P8";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_B4G4R4A4_UNORM"] = 115] = "DXGI_FORMAT_B4G4R4A4_UNORM";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_P208"] = 116] = "DXGI_FORMAT_P208";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_V208"] = 117] = "DXGI_FORMAT_V208";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_V408"] = 118] = "DXGI_FORMAT_V408";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE"] = 119] = "DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE"] = 120] = "DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE";
+    DXGI_FORMAT2[DXGI_FORMAT2["DXGI_FORMAT_FORCE_UINT"] = 121] = "DXGI_FORMAT_FORCE_UINT";
+    return DXGI_FORMAT2;
+  })(DXGI_FORMAT || {});
+  var D3D10_RESOURCE_DIMENSION = /* @__PURE__ */ ((D3D10_RESOURCE_DIMENSION2) => {
+    D3D10_RESOURCE_DIMENSION2[D3D10_RESOURCE_DIMENSION2["DDS_DIMENSION_TEXTURE1D"] = 2] = "DDS_DIMENSION_TEXTURE1D";
+    D3D10_RESOURCE_DIMENSION2[D3D10_RESOURCE_DIMENSION2["DDS_DIMENSION_TEXTURE2D"] = 3] = "DDS_DIMENSION_TEXTURE2D";
+    D3D10_RESOURCE_DIMENSION2[D3D10_RESOURCE_DIMENSION2["DDS_DIMENSION_TEXTURE3D"] = 6] = "DDS_DIMENSION_TEXTURE3D";
+    return D3D10_RESOURCE_DIMENSION2;
+  })(D3D10_RESOURCE_DIMENSION || {});
   function fourCCToInt32(value) {
     return value.charCodeAt(0) + (value.charCodeAt(1) << 8) + (value.charCodeAt(2) << 16) + (value.charCodeAt(3) << 24);
   }
-  function int32ToFourCC(value) {
-    return String.fromCharCode(
-      value & 255,
-      value >> 8 & 255,
-      value >> 16 & 255,
-      value >> 24 & 255
-    );
-  }
-  const FOURCC_DXT1 = fourCCToInt32("DXT1");
-  const FOURCC_DXT3 = fourCCToInt32("DXT3");
-  const FOURCC_DXT5 = fourCCToInt32("DXT5");
-  const headerLengthInt = 31;
-  const offMagic = 0;
-  const offSize = 1;
-  const offFlags = 2;
-  const offHeight = 3;
-  const offWidth = 4;
-  const offMipmapCount = 7;
-  const offPfFlags = 20;
-  const offPfFourCC = 21;
-  const offRGBBitCount = 22;
-  const offRBitMask = 23;
-  const offGBitMask = 24;
-  const offBBitMask = 25;
-  function parseDDS(buffer, supportedFormats) {
-    const header = new Int32Array(buffer, 0, headerLengthInt);
-    if (header[offMagic] !== DDS_MAGIC) {
-      throw new Error("Invalid magic number in DDS header");
+  var D3DFMT = ((D3DFMT2) => {
+    D3DFMT2[D3DFMT2["UNKNOWN"] = 0] = "UNKNOWN";
+    D3DFMT2[D3DFMT2["R8G8B8"] = 20] = "R8G8B8";
+    D3DFMT2[D3DFMT2["A8R8G8B8"] = 21] = "A8R8G8B8";
+    D3DFMT2[D3DFMT2["X8R8G8B8"] = 22] = "X8R8G8B8";
+    D3DFMT2[D3DFMT2["R5G6B5"] = 23] = "R5G6B5";
+    D3DFMT2[D3DFMT2["X1R5G5B5"] = 24] = "X1R5G5B5";
+    D3DFMT2[D3DFMT2["A1R5G5B5"] = 25] = "A1R5G5B5";
+    D3DFMT2[D3DFMT2["A4R4G4B4"] = 26] = "A4R4G4B4";
+    D3DFMT2[D3DFMT2["R3G3B2"] = 27] = "R3G3B2";
+    D3DFMT2[D3DFMT2["A8"] = 28] = "A8";
+    D3DFMT2[D3DFMT2["A8R3G3B2"] = 29] = "A8R3G3B2";
+    D3DFMT2[D3DFMT2["X4R4G4B4"] = 30] = "X4R4G4B4";
+    D3DFMT2[D3DFMT2["A2B10G10R10"] = 31] = "A2B10G10R10";
+    D3DFMT2[D3DFMT2["A8B8G8R8"] = 32] = "A8B8G8R8";
+    D3DFMT2[D3DFMT2["X8B8G8R8"] = 33] = "X8B8G8R8";
+    D3DFMT2[D3DFMT2["G16R16"] = 34] = "G16R16";
+    D3DFMT2[D3DFMT2["A2R10G10B10"] = 35] = "A2R10G10B10";
+    D3DFMT2[D3DFMT2["A16B16G16R16"] = 36] = "A16B16G16R16";
+    D3DFMT2[D3DFMT2["A8P8"] = 40] = "A8P8";
+    D3DFMT2[D3DFMT2["P8"] = 41] = "P8";
+    D3DFMT2[D3DFMT2["L8"] = 50] = "L8";
+    D3DFMT2[D3DFMT2["A8L8"] = 51] = "A8L8";
+    D3DFMT2[D3DFMT2["A4L4"] = 52] = "A4L4";
+    D3DFMT2[D3DFMT2["V8U8"] = 60] = "V8U8";
+    D3DFMT2[D3DFMT2["L6V5U5"] = 61] = "L6V5U5";
+    D3DFMT2[D3DFMT2["X8L8V8U8"] = 62] = "X8L8V8U8";
+    D3DFMT2[D3DFMT2["Q8W8V8U8"] = 63] = "Q8W8V8U8";
+    D3DFMT2[D3DFMT2["V16U16"] = 64] = "V16U16";
+    D3DFMT2[D3DFMT2["A2W10V10U10"] = 67] = "A2W10V10U10";
+    D3DFMT2[D3DFMT2["Q16W16V16U16"] = 110] = "Q16W16V16U16";
+    D3DFMT2[D3DFMT2["R16F"] = 111] = "R16F";
+    D3DFMT2[D3DFMT2["G16R16F"] = 112] = "G16R16F";
+    D3DFMT2[D3DFMT2["A16B16G16R16F"] = 113] = "A16B16G16R16F";
+    D3DFMT2[D3DFMT2["R32F"] = 114] = "R32F";
+    D3DFMT2[D3DFMT2["G32R32F"] = 115] = "G32R32F";
+    D3DFMT2[D3DFMT2["A32B32G32R32F"] = 116] = "A32B32G32R32F";
+    D3DFMT2[D3DFMT2["UYVY"] = fourCCToInt32("UYVY")] = "UYVY";
+    D3DFMT2[D3DFMT2["R8G8_B8G8"] = fourCCToInt32("RGBG")] = "R8G8_B8G8";
+    D3DFMT2[D3DFMT2["YUY2"] = fourCCToInt32("YUY2")] = "YUY2";
+    D3DFMT2[D3DFMT2["D3DFMT_G8R8_G8B8"] = fourCCToInt32("GRGB")] = "D3DFMT_G8R8_G8B8";
+    D3DFMT2[D3DFMT2["DXT1"] = fourCCToInt32("DXT1")] = "DXT1";
+    D3DFMT2[D3DFMT2["DXT2"] = fourCCToInt32("DXT2")] = "DXT2";
+    D3DFMT2[D3DFMT2["DXT3"] = fourCCToInt32("DXT3")] = "DXT3";
+    D3DFMT2[D3DFMT2["DXT4"] = fourCCToInt32("DXT4")] = "DXT4";
+    D3DFMT2[D3DFMT2["DXT5"] = fourCCToInt32("DXT5")] = "DXT5";
+    D3DFMT2[D3DFMT2["ATI1"] = fourCCToInt32("ATI1")] = "ATI1";
+    D3DFMT2[D3DFMT2["AT1N"] = fourCCToInt32("AT1N")] = "AT1N";
+    D3DFMT2[D3DFMT2["ATI2"] = fourCCToInt32("ATI2")] = "ATI2";
+    D3DFMT2[D3DFMT2["AT2N"] = fourCCToInt32("AT2N")] = "AT2N";
+    D3DFMT2[D3DFMT2["BC4U"] = fourCCToInt32("BC4U")] = "BC4U";
+    D3DFMT2[D3DFMT2["BC4S"] = fourCCToInt32("BC4S")] = "BC4S";
+    D3DFMT2[D3DFMT2["BC5U"] = fourCCToInt32("BC5U")] = "BC5U";
+    D3DFMT2[D3DFMT2["BC5S"] = fourCCToInt32("BC5S")] = "BC5S";
+    D3DFMT2[D3DFMT2["DX10"] = fourCCToInt32("DX10")] = "DX10";
+    return D3DFMT2;
+  })(D3DFMT || {});
+  const FOURCC_TO_TEXTURE_FORMAT = {
+    [D3DFMT.DXT1]: "bc1-rgba-unorm",
+    [D3DFMT.DXT2]: "bc2-rgba-unorm",
+    [D3DFMT.DXT3]: "bc2-rgba-unorm",
+    [D3DFMT.DXT4]: "bc3-rgba-unorm",
+    [D3DFMT.DXT5]: "bc3-rgba-unorm",
+    [D3DFMT.ATI1]: "bc4-r-unorm",
+    [D3DFMT.BC4U]: "bc4-r-unorm",
+    [D3DFMT.BC4S]: "bc4-r-snorm",
+    [D3DFMT.ATI2]: "bc5-rg-unorm",
+    [D3DFMT.BC5U]: "bc5-rg-unorm",
+    [D3DFMT.BC5S]: "bc5-rg-snorm",
+    [36 /* A16B16G16R16 */]: "rgba16uint",
+    [110 /* Q16W16V16U16 */]: "rgba16sint",
+    [111 /* R16F */]: "r16float",
+    [112 /* G16R16F */]: "rg16float",
+    [113 /* A16B16G16R16F */]: "rgba16float",
+    [114 /* R32F */]: "r32float",
+    [115 /* G32R32F */]: "rg32float",
+    [116 /* A32B32G32R32F */]: "rgba32float"
+  };
+  const DXGI_TO_TEXTURE_FORMAT = {
+    [70 /* DXGI_FORMAT_BC1_TYPELESS */]: "bc1-rgba-unorm",
+    [71 /* DXGI_FORMAT_BC1_UNORM */]: "bc1-rgba-unorm",
+    [72 /* DXGI_FORMAT_BC1_UNORM_SRGB */]: "bc1-rgba-unorm-srgb",
+    [73 /* DXGI_FORMAT_BC2_TYPELESS */]: "bc2-rgba-unorm",
+    [74 /* DXGI_FORMAT_BC2_UNORM */]: "bc2-rgba-unorm",
+    [75 /* DXGI_FORMAT_BC2_UNORM_SRGB */]: "bc2-rgba-unorm-srgb",
+    [76 /* DXGI_FORMAT_BC3_TYPELESS */]: "bc3-rgba-unorm",
+    [77 /* DXGI_FORMAT_BC3_UNORM */]: "bc3-rgba-unorm",
+    [78 /* DXGI_FORMAT_BC3_UNORM_SRGB */]: "bc3-rgba-unorm-srgb",
+    [79 /* DXGI_FORMAT_BC4_TYPELESS */]: "bc4-r-unorm",
+    [80 /* DXGI_FORMAT_BC4_UNORM */]: "bc4-r-unorm",
+    [81 /* DXGI_FORMAT_BC4_SNORM */]: "bc4-r-snorm",
+    [82 /* DXGI_FORMAT_BC5_TYPELESS */]: "bc5-rg-unorm",
+    [83 /* DXGI_FORMAT_BC5_UNORM */]: "bc5-rg-unorm",
+    [84 /* DXGI_FORMAT_BC5_SNORM */]: "bc5-rg-snorm",
+    [94 /* DXGI_FORMAT_BC6H_TYPELESS */]: "bc6h-rgb-ufloat",
+    [95 /* DXGI_FORMAT_BC6H_UF16 */]: "bc6h-rgb-ufloat",
+    [96 /* DXGI_FORMAT_BC6H_SF16 */]: "bc6h-rgb-float",
+    [97 /* DXGI_FORMAT_BC7_TYPELESS */]: "bc7-rgba-unorm",
+    [98 /* DXGI_FORMAT_BC7_UNORM */]: "bc7-rgba-unorm",
+    [99 /* DXGI_FORMAT_BC7_UNORM_SRGB */]: "bc7-rgba-unorm-srgb",
+    [28 /* DXGI_FORMAT_R8G8B8A8_UNORM */]: "rgba8unorm",
+    [29 /* DXGI_FORMAT_R8G8B8A8_UNORM_SRGB */]: "rgba8unorm-srgb",
+    [87 /* DXGI_FORMAT_B8G8R8A8_UNORM */]: "bgra8unorm",
+    [91 /* DXGI_FORMAT_B8G8R8A8_UNORM_SRGB */]: "bgra8unorm-srgb",
+    [41 /* DXGI_FORMAT_R32_FLOAT */]: "r32float",
+    [49 /* DXGI_FORMAT_R8G8_UNORM */]: "rg8unorm",
+    [56 /* DXGI_FORMAT_R16_UNORM */]: "r16uint",
+    [61 /* DXGI_FORMAT_R8_UNORM */]: "r8unorm",
+    [24 /* DXGI_FORMAT_R10G10B10A2_UNORM */]: "rgb10a2unorm",
+    [11 /* DXGI_FORMAT_R16G16B16A16_UNORM */]: "rgba16uint",
+    [13 /* DXGI_FORMAT_R16G16B16A16_SNORM */]: "rgba16sint",
+    [10 /* DXGI_FORMAT_R16G16B16A16_FLOAT */]: "rgba16float",
+    [54 /* DXGI_FORMAT_R16_FLOAT */]: "r16float",
+    [34 /* DXGI_FORMAT_R16G16_FLOAT */]: "rg16float",
+    [16 /* DXGI_FORMAT_R32G32_FLOAT */]: "rg32float",
+    [2 /* DXGI_FORMAT_R32G32B32A32_FLOAT */]: "rgba32float"
+  };
+  const DDS = {
+    MAGIC_VALUE: 542327876,
+    MAGIC_SIZE: 4,
+    HEADER_SIZE: 124,
+    HEADER_DX10_SIZE: 20,
+    PIXEL_FORMAT_FLAGS: {
+      // PIXEL_FORMAT flags
+      // https://github.com/Microsoft/DirectXTex/blob/main/DirectXTex/DDS.h
+      // https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dds-pixelformat
+      ALPHAPIXELS: 1,
+      ALPHA: 2,
+      FOURCC: 4,
+      RGB: 64,
+      RGBA: 65,
+      YUV: 512,
+      LUMINANCE: 131072,
+      LUMINANCEA: 131073
+    },
+    RESOURCE_MISC_TEXTURECUBE: 4,
+    HEADER_FIELDS: DDS_HEADER_FIELDS,
+    HEADER_DX10_FIELDS: DDS_DX10_FIELDS,
+    DXGI_FORMAT,
+    D3D10_RESOURCE_DIMENSION,
+    D3DFMT
+  };
+  const TEXTURE_FORMAT_BLOCK_SIZE = {
+    "bc1-rgba-unorm": 8,
+    "bc1-rgba-unorm-srgb": 8,
+    "bc2-rgba-unorm": 16,
+    "bc2-rgba-unorm-srgb": 16,
+    "bc3-rgba-unorm": 16,
+    "bc3-rgba-unorm-srgb": 16,
+    "bc4-r-unorm": 8,
+    "bc4-r-snorm": 8,
+    "bc5-rg-unorm": 16,
+    "bc5-rg-snorm": 16,
+    "bc6h-rgb-ufloat": 16,
+    "bc6h-rgb-float": 16,
+    "bc7-rgba-unorm": 16,
+    "bc7-rgba-unorm-srgb": 16
+  };
+
+  "use strict";
+  function parseDDS(arrayBuffer, supportedFormats) {
+    const {
+      format,
+      fourCC,
+      width,
+      height,
+      dataOffset,
+      mipmapCount
+    } = parseDDSHeader(arrayBuffer);
+    if (!supportedFormats.includes(format)) {
+      throw new Error(`Unsupported texture format: ${fourCC} ${format}, supported: ${supportedFormats}`);
     }
-    const headerIsZero = header[offPfFlags] === 0 ? 1 : 0;
-    if (headerIsZero & DDPF_FOURCC) {
-      throw new Error("Unsupported format, must contain a FourCC code");
-    }
-    const fourCC = header[offPfFourCC];
-    let blockBytes = 0;
-    let bytesPerPixel = 0;
-    let format;
-    switch (fourCC) {
-      case FOURCC_DXT1:
-        blockBytes = 8;
-        format = "bc1-rgba-unorm";
-        break;
-      case FOURCC_DXT3:
-        blockBytes = 16;
-        format = "bc2-rgba-unorm";
-        break;
-      case FOURCC_DXT5:
-        blockBytes = 16;
-        format = "bc3-rgba-unorm";
-        break;
-      default: {
-        const bitCount = header[offRGBBitCount];
-        const rBitMask = header[offRBitMask];
-        const gBitMask = header[offGBitMask];
-        const bBitMask = header[offBBitMask];
-        if (bitCount === 32) {
-          if (rBitMask & 255 && gBitMask & 65280 && bBitMask & 16711680) {
-            format = "rgba8unorm";
-            bytesPerPixel = 4;
-          } else if (rBitMask & 16711680 && gBitMask & 65280 && bBitMask & 255) {
-            format = "bgra8unorm";
-            bytesPerPixel = 4;
-          }
-        }
-      }
-    }
-    const width = header[offWidth];
-    const height = header[offHeight];
-    let dataOffset = header[offSize] + 4;
-    if (supportedFormats.indexOf(format) === -1) {
-      throw new Error(`Unsupported texture format: ${int32ToFourCC(fourCC)} ${format}`);
-    }
-    if (blockBytes === 0) {
+    if (mipmapCount <= 1) {
       return {
         format,
         width,
         height,
-        resource: [new Uint8Array(buffer, dataOffset, width * height * bytesPerPixel)],
+        resource: [new Uint8Array(arrayBuffer, dataOffset)],
         alphaMode: "no-premultiply-alpha"
       };
     }
-    let mipmapCount = 1;
-    if (header[offFlags] & DDSD_MIPMAPCOUNT) {
-      mipmapCount = Math.max(1, header[offMipmapCount]);
-    }
-    const levelBuffers = [];
-    let mipWidth = width;
-    let mipHeight = height;
-    for (let level = 0; level < mipmapCount; ++level) {
-      const byteLength = blockBytes ? Math.max(4, mipWidth) / 4 * Math.max(4, mipHeight) / 4 * blockBytes : mipWidth * mipHeight * 4;
-      const levelBuffer = new Uint8Array(buffer, dataOffset, byteLength);
-      levelBuffers.push(levelBuffer);
-      dataOffset += byteLength;
-      mipWidth = Math.max(mipWidth >> 1, 1);
-      mipHeight = Math.max(mipHeight >> 1, 1);
-    }
+    const levelBuffers = getMipmapLevelBuffers(format, width, height, dataOffset, mipmapCount, arrayBuffer);
     const textureOptions = {
       format,
       width,
@@ -26399,6 +27482,139 @@ ${e}`);
       alphaMode: "no-premultiply-alpha"
     };
     return textureOptions;
+  }
+  function getMipmapLevelBuffers(format, width, height, dataOffset, mipmapCount, arrayBuffer) {
+    const levelBuffers = [];
+    const blockBytes = TEXTURE_FORMAT_BLOCK_SIZE[format];
+    let mipWidth = width;
+    let mipHeight = height;
+    let offset = dataOffset;
+    for (let level = 0; level < mipmapCount; ++level) {
+      const byteLength = blockBytes ? Math.max(4, mipWidth) / 4 * Math.max(4, mipHeight) / 4 * blockBytes : mipWidth * mipHeight * 4;
+      const levelBuffer = new Uint8Array(arrayBuffer, offset, byteLength);
+      levelBuffers.push(levelBuffer);
+      offset += byteLength;
+      mipWidth = Math.max(mipWidth >> 1, 1);
+      mipHeight = Math.max(mipHeight >> 1, 1);
+    }
+    return levelBuffers;
+  }
+  function parseDDSHeader(buffer) {
+    const header = new Uint32Array(buffer, 0, DDS.HEADER_SIZE / Uint32Array.BYTES_PER_ELEMENT);
+    if (header[DDS.HEADER_FIELDS.MAGIC] !== DDS.MAGIC_VALUE) {
+      throw new Error("Invalid magic number in DDS header");
+    }
+    const height = header[DDS.HEADER_FIELDS.HEIGHT];
+    const width = header[DDS.HEADER_FIELDS.WIDTH];
+    const mipmapCount = Math.max(1, header[DDS.HEADER_FIELDS.MIPMAP_COUNT]);
+    const flags = header[DDS.HEADER_FIELDS.PF_FLAGS];
+    const fourCC = header[DDS.HEADER_FIELDS.FOURCC];
+    const format = getTextureFormat(header, flags, fourCC, buffer);
+    const dataOffset = DDS.MAGIC_SIZE + DDS.HEADER_SIZE + (fourCC === DDS.D3DFMT.DX10 ? DDS.HEADER_DX10_SIZE : 0);
+    return {
+      format,
+      fourCC,
+      width,
+      height,
+      dataOffset,
+      mipmapCount
+    };
+  }
+  function getTextureFormat(header, flags, fourCC, buffer) {
+    if (flags & DDS.PIXEL_FORMAT_FLAGS.FOURCC) {
+      if (fourCC === DDS.D3DFMT.DX10) {
+        const dx10Header = new Uint32Array(
+          buffer,
+          DDS.MAGIC_SIZE + DDS.HEADER_SIZE,
+          // there is a 20-byte DDS_HEADER_DX10 after DDS_HEADER
+          DDS.HEADER_DX10_SIZE / Uint32Array.BYTES_PER_ELEMENT
+        );
+        const miscFlag = dx10Header[DDS.HEADER_DX10_FIELDS.MISC_FLAG];
+        if (miscFlag === DDS.RESOURCE_MISC_TEXTURECUBE) {
+          throw new Error("DDSParser does not support cubemap textures");
+        }
+        const resourceDimension = dx10Header[DDS.HEADER_DX10_FIELDS.RESOURCE_DIMENSION];
+        if (resourceDimension === DDS.D3D10_RESOURCE_DIMENSION.DDS_DIMENSION_TEXTURE3D) {
+          throw new Error("DDSParser does not supported 3D texture data");
+        }
+        const dxgiFormat = dx10Header[DDS.HEADER_DX10_FIELDS.DXGI_FORMAT];
+        if (dxgiFormat in DXGI_TO_TEXTURE_FORMAT) {
+          return DXGI_TO_TEXTURE_FORMAT[dxgiFormat];
+        }
+        throw new Error(`DDSParser cannot parse texture data with DXGI format ${dxgiFormat}`);
+      }
+      if (fourCC in FOURCC_TO_TEXTURE_FORMAT) {
+        return FOURCC_TO_TEXTURE_FORMAT[fourCC];
+      }
+      throw new Error(`DDSParser cannot parse texture data with fourCC format ${fourCC}`);
+    }
+    if (flags & DDS.PIXEL_FORMAT_FLAGS.RGB || flags & DDS.PIXEL_FORMAT_FLAGS.RGBA) {
+      return getUncompressedTextureFormat(header);
+    }
+    if (flags & DDS.PIXEL_FORMAT_FLAGS.YUV) {
+      throw new Error("DDSParser does not supported YUV uncompressed texture data.");
+    }
+    if (flags & DDS.PIXEL_FORMAT_FLAGS.LUMINANCE || flags & DDS.PIXEL_FORMAT_FLAGS.LUMINANCEA) {
+      throw new Error("DDSParser does not support single-channel (lumninance) texture data!");
+    }
+    if (flags & DDS.PIXEL_FORMAT_FLAGS.ALPHA || flags & DDS.PIXEL_FORMAT_FLAGS.ALPHAPIXELS) {
+      throw new Error("DDSParser does not support single-channel (alpha) texture data!");
+    }
+    throw new Error("DDSParser failed to load a texture file due to an unknown reason!");
+  }
+  function getUncompressedTextureFormat(header) {
+    const bitCount = header[DDS.HEADER_FIELDS.RGB_BITCOUNT];
+    const rBitMask = header[DDS.HEADER_FIELDS.R_BIT_MASK];
+    const gBitMask = header[DDS.HEADER_FIELDS.G_BIT_MASK];
+    const bBitMask = header[DDS.HEADER_FIELDS.B_BIT_MASK];
+    const aBitMask = header[DDS.HEADER_FIELDS.A_BIT_MASK];
+    switch (bitCount) {
+      case 32:
+        if (rBitMask === 255 && gBitMask === 65280 && bBitMask === 16711680 && aBitMask === 4278190080) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_R8G8B8A8_UNORM];
+        }
+        if (rBitMask === 16711680 && gBitMask === 65280 && bBitMask === 255 && aBitMask === 4278190080) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_B8G8R8A8_UNORM];
+        }
+        if (rBitMask === 1072693248 && gBitMask === 1047552 && bBitMask === 1023 && aBitMask === 3221225472) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_R10G10B10A2_UNORM];
+        }
+        if (rBitMask === 65535 && gBitMask === 4294901760 && bBitMask === 0 && aBitMask === 0) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_R16G16_UNORM];
+        }
+        if (rBitMask === 4294967295 && gBitMask === 0 && bBitMask === 0 && aBitMask === 0) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_R32_FLOAT];
+        }
+        break;
+      case 24:
+        if (rBitMask === 16711680 && gBitMask === 65280 && bBitMask === 255 && aBitMask === 32768) {
+        }
+        break;
+      case 16:
+        if (rBitMask === 31744 && gBitMask === 992 && bBitMask === 31 && aBitMask === 32768) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_B5G5R5A1_UNORM];
+        }
+        if (rBitMask === 63488 && gBitMask === 2016 && bBitMask === 31 && aBitMask === 0) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_B5G6R5_UNORM];
+        }
+        if (rBitMask === 3840 && gBitMask === 240 && bBitMask === 15 && aBitMask === 61440) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_B4G4R4A4_UNORM];
+        }
+        if (rBitMask === 255 && gBitMask === 0 && bBitMask === 0 && aBitMask === 65280) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_R8G8_UNORM];
+        }
+        if (rBitMask === 65535 && gBitMask === 0 && bBitMask === 0 && aBitMask === 0) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_R16_UNORM];
+        }
+        break;
+      case 8:
+        if (rBitMask === 255 && gBitMask === 0 && bBitMask === 0 && aBitMask === 0) {
+          return DXGI_TO_TEXTURE_FORMAT[DDS.DXGI_FORMAT.DXGI_FORMAT_R8_UNORM];
+        }
+        break;
+    }
+    throw new Error(`DDSParser does not support uncompressed texture with configuration:
+              bitCount = ${bitCount}, rBitMask = ${rBitMask}, gBitMask = ${gBitMask}, aBitMask = ${aBitMask}`);
   }
 
   "use strict";
@@ -26428,7 +27644,432 @@ ${e}`);
     }
   };
 
-  const WORKER_CODE = "(function () {\n    'use strict';\n\n    const converters = {\n      rgb8unorm: {\n        convertedFormat: \"rgba8unorm\",\n        convertFunction: convertRGBtoRGBA\n      },\n      \"rgb8unorm-srgb\": {\n        convertedFormat: \"rgba8unorm-srgb\",\n        convertFunction: convertRGBtoRGBA\n      }\n    };\n    function convertFormatIfRequired(textureOptions) {\n      const format = textureOptions.format;\n      if (converters[format]) {\n        const convertFunction = converters[format].convertFunction;\n        const levelBuffers = textureOptions.resource;\n        for (let i = 0; i < levelBuffers.length; i++) {\n          levelBuffers[i] = convertFunction(levelBuffers[i]);\n        }\n        textureOptions.format = converters[format].convertedFormat;\n      }\n    }\n    function convertRGBtoRGBA(levelBuffer) {\n      const pixelCount = levelBuffer.byteLength / 3;\n      const levelBufferWithAlpha = new Uint32Array(pixelCount);\n      for (let i = 0; i < pixelCount; ++i) {\n        levelBufferWithAlpha[i] = levelBuffer[i * 3] + (levelBuffer[i * 3 + 1] << 8) + (levelBuffer[i * 3 + 2] << 16) + 4278190080;\n      }\n      return new Uint8Array(levelBufferWithAlpha.buffer);\n    }\n\n    function createLevelBuffersFromKTX(ktxTexture) {\n      const levelBuffers = [];\n      for (let i = 0; i < ktxTexture.numLevels; i++) {\n        const imageData = ktxTexture.getImageData(i, 0, 0);\n        const levelBuffer = new Uint8Array(imageData.byteLength);\n        levelBuffer.set(imageData);\n        levelBuffers.push(levelBuffer);\n      }\n      return levelBuffers;\n    }\n\n    const glFormatToGPUFormatMap = {\n      6408: \"rgba8unorm\",\n      32856: \"bgra8unorm\",\n      //\n      32857: \"rgb10a2unorm\",\n      33189: \"depth16unorm\",\n      33190: \"depth24plus\",\n      33321: \"r8unorm\",\n      33323: \"rg8unorm\",\n      33325: \"r16float\",\n      33326: \"r32float\",\n      33327: \"rg16float\",\n      33328: \"rg32float\",\n      33329: \"r8sint\",\n      33330: \"r8uint\",\n      33331: \"r16sint\",\n      33332: \"r16uint\",\n      33333: \"r32sint\",\n      33334: \"r32uint\",\n      33335: \"rg8sint\",\n      33336: \"rg8uint\",\n      33337: \"rg16sint\",\n      33338: \"rg16uint\",\n      33339: \"rg32sint\",\n      33340: \"rg32uint\",\n      33778: \"bc2-rgba-unorm\",\n      33779: \"bc3-rgba-unorm\",\n      34836: \"rgba32float\",\n      34842: \"rgba16float\",\n      35056: \"depth24plus-stencil8\",\n      35898: \"rg11b10ufloat\",\n      35901: \"rgb9e5ufloat\",\n      35907: \"rgba8unorm-srgb\",\n      // bgra8unorm-srgb\n      36012: \"depth32float\",\n      36013: \"depth32float-stencil8\",\n      36168: \"stencil8\",\n      36208: \"rgba32uint\",\n      36214: \"rgba16uint\",\n      36220: \"rgba8uint\",\n      36226: \"rgba32sint\",\n      36232: \"rgba16sint\",\n      36238: \"rgba8sint\",\n      36492: \"bc7-rgba-unorm\",\n      36756: \"r8snorm\",\n      36757: \"rg8snorm\",\n      36759: \"rgba8snorm\",\n      37496: \"etc2-rgba8unorm\",\n      37808: \"astc-4x4-unorm\"\n    };\n    function glFormatToGPUFormat(glInternalFormat) {\n      const format = glFormatToGPUFormatMap[glInternalFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported glInternalFormat: ${glInternalFormat}`);\n    }\n\n    const vkFormatToGPUFormatMap = {\n      23: \"rgb8unorm\",\n      // VK_FORMAT_R8G8B8_UNORM\n      37: \"rgba8unorm\",\n      // VK_FORMAT_R8G8B8A8_UNORM\n      43: \"rgba8unorm-srgb\"\n      // VK_FORMAT_R8G8B8A8_SRGB\n      // TODO add more!\n    };\n    function vkFormatToGPUFormat(vkFormat) {\n      const format = vkFormatToGPUFormatMap[vkFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported VkFormat: ${vkFormat}`);\n    }\n\n    function getTextureFormatFromKTXTexture(ktxTexture) {\n      if (ktxTexture.classId === 2) {\n        return vkFormatToGPUFormat(ktxTexture.vkFormat);\n      }\n      return glFormatToGPUFormat(ktxTexture.glInternalformat);\n    }\n\n    const gpuFormatToBasisTranscoderFormatMap = {\n      \"bc3-rgba-unorm\": \"BC3_RGBA\",\n      \"bc7-rgba-unorm\": \"BC7_M5_RGBA\",\n      \"etc2-rgba8unorm\": \"ETC2_RGBA\",\n      \"astc-4x4-unorm\": \"ASTC_4x4_RGBA\",\n      // Uncompressed\n      rgba8unorm: \"RGBA32\",\n      rg11b10ufloat: \"R11F_G11F_B10F\"\n    };\n    function gpuFormatToKTXBasisTranscoderFormat(transcoderFormat) {\n      const format = gpuFormatToBasisTranscoderFormatMap[transcoderFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported transcoderFormat: ${transcoderFormat}`);\n    }\n\n    const settings = {\n      jsUrl: \"\",\n      wasmUrl: \"\"\n    };\n    let basisTranscoderFormat;\n    let basisTranscodedTextureFormat;\n    let ktxPromise;\n    async function getKTX() {\n      if (!ktxPromise) {\n        const absoluteJsUrl = new URL(settings.jsUrl, location.origin).href;\n        const absoluteWasmUrl = new URL(settings.wasmUrl, location.origin).href;\n        importScripts(absoluteJsUrl);\n        ktxPromise = new Promise((resolve) => {\n          LIBKTX({\n            locateFile: (_file) => absoluteWasmUrl\n          }).then((libktx) => {\n            resolve(libktx);\n          });\n        });\n      }\n      return ktxPromise;\n    }\n    async function fetchKTXTexture(url, ktx) {\n      const ktx2Response = await fetch(url);\n      if (ktx2Response.ok) {\n        const ktx2ArrayBuffer = await ktx2Response.arrayBuffer();\n        return new ktx.ktxTexture(new Uint8Array(ktx2ArrayBuffer));\n      }\n      throw new Error(`Failed to load KTX(2) texture: ${url}`);\n    }\n    const preferredTranscodedFormat = [\n      \"etc2-rgba8unorm\",\n      \"bc7-rgba-unorm\",\n      \"bc3-rgba-unorm\",\n      \"astc-4x4-unorm\",\n      \"rgba8unorm\"\n    ];\n    async function load(url) {\n      const ktx = await getKTX();\n      const ktxTexture = await fetchKTXTexture(url, ktx);\n      let format;\n      if (ktxTexture.needsTranscoding) {\n        format = basisTranscodedTextureFormat;\n        const transcodeFormat = ktx.TranscodeTarget[basisTranscoderFormat];\n        const result = ktxTexture.transcodeBasis(transcodeFormat, 0);\n        if (result !== ktx.ErrorCode.SUCCESS) {\n          throw new Error(\"Unable to transcode basis texture.\");\n        }\n      } else {\n        format = getTextureFormatFromKTXTexture(ktxTexture);\n      }\n      const levelBuffers = createLevelBuffersFromKTX(ktxTexture);\n      const textureOptions = {\n        width: ktxTexture.baseWidth,\n        height: ktxTexture.baseHeight,\n        format,\n        mipLevelCount: ktxTexture.numLevels,\n        resource: levelBuffers,\n        alphaMode: \"no-premultiply-alpha\"\n      };\n      convertFormatIfRequired(textureOptions);\n      return textureOptions;\n    }\n    async function init(jsUrl, wasmUrl, supportedTextures) {\n      if (jsUrl)\n        settings.jsUrl = jsUrl;\n      if (wasmUrl)\n        settings.wasmUrl = wasmUrl;\n      basisTranscodedTextureFormat = preferredTranscodedFormat.filter((format) => supportedTextures.includes(format))[0];\n      basisTranscoderFormat = gpuFormatToKTXBasisTranscoderFormat(basisTranscodedTextureFormat);\n      await getKTX();\n    }\n    const messageHandlers = {\n      init: async (data) => {\n        const { jsUrl, wasmUrl, supportedTextures } = data;\n        await init(jsUrl, wasmUrl, supportedTextures);\n      },\n      load: async (data) => {\n        var _a;\n        try {\n          const textureOptions = await load(data.url);\n          return {\n            type: \"load\",\n            url: data.url,\n            success: true,\n            textureOptions,\n            transferables: (_a = textureOptions.resource) == null ? void 0 : _a.map((arr) => arr.buffer)\n          };\n        } catch (e) {\n          throw e;\n        }\n      }\n    };\n    self.onmessage = async (messageEvent) => {\n      var _a;\n      const message = messageEvent.data;\n      const response = await ((_a = messageHandlers[message.type]) == null ? void 0 : _a.call(messageHandlers, message));\n      if (response) {\n        self.postMessage(response, response.transferables);\n      }\n    };\n\n})();\n";
+  "use strict";
+  var GL_INTERNAL_FORMAT = /* @__PURE__ */ ((GL_INTERNAL_FORMAT2) => {
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["RGBA8_SNORM"] = 36759] = "RGBA8_SNORM";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["RGBA"] = 6408] = "RGBA";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["RGBA8UI"] = 36220] = "RGBA8UI";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["SRGB8_ALPHA8"] = 35907] = "SRGB8_ALPHA8";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["RGBA8I"] = 36238] = "RGBA8I";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["RGBA8"] = 32856] = "RGBA8";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGB_S3TC_DXT1_EXT"] = 33776] = "COMPRESSED_RGB_S3TC_DXT1_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_S3TC_DXT1_EXT"] = 33777] = "COMPRESSED_RGBA_S3TC_DXT1_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_S3TC_DXT3_EXT"] = 33778] = "COMPRESSED_RGBA_S3TC_DXT3_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_S3TC_DXT5_EXT"] = 33779] = "COMPRESSED_RGBA_S3TC_DXT5_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT"] = 35917] = "COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT"] = 35918] = "COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT"] = 35919] = "COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB_S3TC_DXT1_EXT"] = 35916] = "COMPRESSED_SRGB_S3TC_DXT1_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RED_RGTC1_EXT"] = 36283] = "COMPRESSED_RED_RGTC1_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SIGNED_RED_RGTC1_EXT"] = 36284] = "COMPRESSED_SIGNED_RED_RGTC1_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RED_GREEN_RGTC2_EXT"] = 36285] = "COMPRESSED_RED_GREEN_RGTC2_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT"] = 36286] = "COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_R11_EAC"] = 37488] = "COMPRESSED_R11_EAC";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SIGNED_R11_EAC"] = 37489] = "COMPRESSED_SIGNED_R11_EAC";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RG11_EAC"] = 37490] = "COMPRESSED_RG11_EAC";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SIGNED_RG11_EAC"] = 37491] = "COMPRESSED_SIGNED_RG11_EAC";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGB8_ETC2"] = 37492] = "COMPRESSED_RGB8_ETC2";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA8_ETC2_EAC"] = 37496] = "COMPRESSED_RGBA8_ETC2_EAC";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ETC2"] = 37493] = "COMPRESSED_SRGB8_ETC2";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ETC2_EAC"] = 37497] = "COMPRESSED_SRGB8_ALPHA8_ETC2_EAC";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2"] = 37494] = "COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2"] = 37495] = "COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_4x4_KHR"] = 37808] = "COMPRESSED_RGBA_ASTC_4x4_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_5x4_KHR"] = 37809] = "COMPRESSED_RGBA_ASTC_5x4_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_5x5_KHR"] = 37810] = "COMPRESSED_RGBA_ASTC_5x5_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_6x5_KHR"] = 37811] = "COMPRESSED_RGBA_ASTC_6x5_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_6x6_KHR"] = 37812] = "COMPRESSED_RGBA_ASTC_6x6_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_8x5_KHR"] = 37813] = "COMPRESSED_RGBA_ASTC_8x5_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_8x6_KHR"] = 37814] = "COMPRESSED_RGBA_ASTC_8x6_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_8x8_KHR"] = 37815] = "COMPRESSED_RGBA_ASTC_8x8_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_10x5_KHR"] = 37816] = "COMPRESSED_RGBA_ASTC_10x5_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_10x6_KHR"] = 37817] = "COMPRESSED_RGBA_ASTC_10x6_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_10x8_KHR"] = 37818] = "COMPRESSED_RGBA_ASTC_10x8_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_10x10_KHR"] = 37819] = "COMPRESSED_RGBA_ASTC_10x10_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_12x10_KHR"] = 37820] = "COMPRESSED_RGBA_ASTC_12x10_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_ASTC_12x12_KHR"] = 37821] = "COMPRESSED_RGBA_ASTC_12x12_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR"] = 37840] = "COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR"] = 37841] = "COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR"] = 37842] = "COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR"] = 37843] = "COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR"] = 37844] = "COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR"] = 37845] = "COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR"] = 37846] = "COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR"] = 37847] = "COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR"] = 37848] = "COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR"] = 37849] = "COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR"] = 37850] = "COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR"] = 37851] = "COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR"] = 37852] = "COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR"] = 37853] = "COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGBA_BPTC_UNORM_EXT"] = 36492] = "COMPRESSED_RGBA_BPTC_UNORM_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT"] = 36493] = "COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT"] = 36494] = "COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT";
+    GL_INTERNAL_FORMAT2[GL_INTERNAL_FORMAT2["COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT"] = 36495] = "COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT";
+    return GL_INTERNAL_FORMAT2;
+  })(GL_INTERNAL_FORMAT || {});
+  var GL_FORMATS$1 = /* @__PURE__ */ ((GL_FORMATS2) => {
+    GL_FORMATS2[GL_FORMATS2["RGBA"] = 6408] = "RGBA";
+    GL_FORMATS2[GL_FORMATS2["RGB"] = 6407] = "RGB";
+    GL_FORMATS2[GL_FORMATS2["RG"] = 33319] = "RG";
+    GL_FORMATS2[GL_FORMATS2["RED"] = 6403] = "RED";
+    GL_FORMATS2[GL_FORMATS2["RGBA_INTEGER"] = 36249] = "RGBA_INTEGER";
+    GL_FORMATS2[GL_FORMATS2["RGB_INTEGER"] = 36248] = "RGB_INTEGER";
+    GL_FORMATS2[GL_FORMATS2["RG_INTEGER"] = 33320] = "RG_INTEGER";
+    GL_FORMATS2[GL_FORMATS2["RED_INTEGER"] = 36244] = "RED_INTEGER";
+    GL_FORMATS2[GL_FORMATS2["ALPHA"] = 6406] = "ALPHA";
+    GL_FORMATS2[GL_FORMATS2["LUMINANCE"] = 6409] = "LUMINANCE";
+    GL_FORMATS2[GL_FORMATS2["LUMINANCE_ALPHA"] = 6410] = "LUMINANCE_ALPHA";
+    GL_FORMATS2[GL_FORMATS2["DEPTH_COMPONENT"] = 6402] = "DEPTH_COMPONENT";
+    GL_FORMATS2[GL_FORMATS2["DEPTH_STENCIL"] = 34041] = "DEPTH_STENCIL";
+    return GL_FORMATS2;
+  })(GL_FORMATS$1 || {});
+  var GL_TYPES$1 = /* @__PURE__ */ ((GL_TYPES2) => {
+    GL_TYPES2[GL_TYPES2["UNSIGNED_BYTE"] = 5121] = "UNSIGNED_BYTE";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_SHORT"] = 5123] = "UNSIGNED_SHORT";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_SHORT_5_6_5"] = 33635] = "UNSIGNED_SHORT_5_6_5";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_SHORT_4_4_4_4"] = 32819] = "UNSIGNED_SHORT_4_4_4_4";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_SHORT_5_5_5_1"] = 32820] = "UNSIGNED_SHORT_5_5_5_1";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_INT"] = 5125] = "UNSIGNED_INT";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_INT_10F_11F_11F_REV"] = 35899] = "UNSIGNED_INT_10F_11F_11F_REV";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_INT_2_10_10_10_REV"] = 33640] = "UNSIGNED_INT_2_10_10_10_REV";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_INT_24_8"] = 34042] = "UNSIGNED_INT_24_8";
+    GL_TYPES2[GL_TYPES2["UNSIGNED_INT_5_9_9_9_REV"] = 35902] = "UNSIGNED_INT_5_9_9_9_REV";
+    GL_TYPES2[GL_TYPES2["BYTE"] = 5120] = "BYTE";
+    GL_TYPES2[GL_TYPES2["SHORT"] = 5122] = "SHORT";
+    GL_TYPES2[GL_TYPES2["INT"] = 5124] = "INT";
+    GL_TYPES2[GL_TYPES2["FLOAT"] = 5126] = "FLOAT";
+    GL_TYPES2[GL_TYPES2["FLOAT_32_UNSIGNED_INT_24_8_REV"] = 36269] = "FLOAT_32_UNSIGNED_INT_24_8_REV";
+    GL_TYPES2[GL_TYPES2["HALF_FLOAT"] = 36193] = "HALF_FLOAT";
+    return GL_TYPES2;
+  })(GL_TYPES$1 || {});
+  const INTERNAL_FORMAT_TO_TEXTURE_FORMATS = {
+    [33776 /* COMPRESSED_RGB_S3TC_DXT1_EXT */]: "bc1-rgba-unorm",
+    // TODO: ???
+    [33777 /* COMPRESSED_RGBA_S3TC_DXT1_EXT */]: "bc1-rgba-unorm",
+    [33778 /* COMPRESSED_RGBA_S3TC_DXT3_EXT */]: "bc2-rgba-unorm",
+    [33779 /* COMPRESSED_RGBA_S3TC_DXT5_EXT */]: "bc3-rgba-unorm",
+    [35916 /* COMPRESSED_SRGB_S3TC_DXT1_EXT */]: "bc1-rgba-unorm-srgb",
+    // TODO: ???
+    [35917 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT */]: "bc1-rgba-unorm-srgb",
+    [35918 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT */]: "bc2-rgba-unorm-srgb",
+    [35919 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT */]: "bc3-rgba-unorm-srgb",
+    [36283 /* COMPRESSED_RED_RGTC1_EXT */]: "bc4-r-unorm",
+    [36284 /* COMPRESSED_SIGNED_RED_RGTC1_EXT */]: "bc4-r-snorm",
+    [36285 /* COMPRESSED_RED_GREEN_RGTC2_EXT */]: "bc5-rg-unorm",
+    [36286 /* COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT */]: "bc5-rg-snorm",
+    [37488 /* COMPRESSED_R11_EAC */]: "eac-r11unorm",
+    // [GL_INTERNAL_FORMAT.COMPRESSED_SIGNED_R11_EAC]: 'eac-r11snorm',
+    [37490 /* COMPRESSED_RG11_EAC */]: "eac-rg11snorm",
+    // [GL_INTERNAL_FORMAT.COMPRESSED_SIGNED_RG11_EAC]: 'eac-rg11unorm',
+    [37492 /* COMPRESSED_RGB8_ETC2 */]: "etc2-rgb8unorm",
+    [37496 /* COMPRESSED_RGBA8_ETC2_EAC */]: "etc2-rgba8unorm",
+    [37493 /* COMPRESSED_SRGB8_ETC2 */]: "etc2-rgb8unorm-srgb",
+    [37497 /* COMPRESSED_SRGB8_ALPHA8_ETC2_EAC */]: "etc2-rgba8unorm-srgb",
+    [37494 /* COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2 */]: "etc2-rgb8a1unorm",
+    [37495 /* COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 */]: "etc2-rgb8a1unorm-srgb",
+    [37808 /* COMPRESSED_RGBA_ASTC_4x4_KHR */]: "astc-4x4-unorm",
+    [37840 /* COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR */]: "astc-4x4-unorm-srgb",
+    [37809 /* COMPRESSED_RGBA_ASTC_5x4_KHR */]: "astc-5x4-unorm",
+    [37841 /* COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR */]: "astc-5x4-unorm-srgb",
+    [37810 /* COMPRESSED_RGBA_ASTC_5x5_KHR */]: "astc-5x5-unorm",
+    [37842 /* COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR */]: "astc-5x5-unorm-srgb",
+    [37811 /* COMPRESSED_RGBA_ASTC_6x5_KHR */]: "astc-6x5-unorm",
+    [37843 /* COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR */]: "astc-6x5-unorm-srgb",
+    [37812 /* COMPRESSED_RGBA_ASTC_6x6_KHR */]: "astc-6x6-unorm",
+    [37844 /* COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR */]: "astc-6x6-unorm-srgb",
+    [37813 /* COMPRESSED_RGBA_ASTC_8x5_KHR */]: "astc-8x5-unorm",
+    [37845 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR */]: "astc-8x5-unorm-srgb",
+    [37814 /* COMPRESSED_RGBA_ASTC_8x6_KHR */]: "astc-8x6-unorm",
+    [37846 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR */]: "astc-8x6-unorm-srgb",
+    [37815 /* COMPRESSED_RGBA_ASTC_8x8_KHR */]: "astc-8x8-unorm",
+    [37847 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR */]: "astc-8x8-unorm-srgb",
+    [37816 /* COMPRESSED_RGBA_ASTC_10x5_KHR */]: "astc-10x5-unorm",
+    [37848 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR */]: "astc-10x5-unorm-srgb",
+    [37817 /* COMPRESSED_RGBA_ASTC_10x6_KHR */]: "astc-10x6-unorm",
+    [37849 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR */]: "astc-10x6-unorm-srgb",
+    [37818 /* COMPRESSED_RGBA_ASTC_10x8_KHR */]: "astc-10x8-unorm",
+    [37850 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR */]: "astc-10x8-unorm-srgb",
+    [37819 /* COMPRESSED_RGBA_ASTC_10x10_KHR */]: "astc-10x10-unorm",
+    [37851 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR */]: "astc-10x10-unorm-srgb",
+    [37820 /* COMPRESSED_RGBA_ASTC_12x10_KHR */]: "astc-12x10-unorm",
+    [37852 /* COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR */]: "astc-12x10-unorm-srgb",
+    [37821 /* COMPRESSED_RGBA_ASTC_12x12_KHR */]: "astc-12x12-unorm",
+    [37853 /* COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR */]: "astc-12x12-unorm-srgb",
+    [36492 /* COMPRESSED_RGBA_BPTC_UNORM_EXT */]: "bc7-rgba-unorm",
+    [36493 /* COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT */]: "bc7-rgba-unorm-srgb",
+    [36494 /* COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT */]: "bc6h-rgb-float",
+    [36495 /* COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT */]: "bc6h-rgb-ufloat",
+    [35907 /* SRGB8_ALPHA8 */]: "rgba8unorm-srgb",
+    [36759 /* RGBA8_SNORM */]: "rgba8snorm",
+    [36220 /* RGBA8UI */]: "rgba8uint",
+    [36238 /* RGBA8I */]: "rgba8sint",
+    [6408 /* RGBA */]: "rgba8unorm"
+    // [GL_INTERNAL_FORMAT.RGBA8]: 'bgra8unorm'
+  };
+  const FILE_IDENTIFIER = [171, 75, 84, 88, 32, 49, 49, 187, 13, 10, 26, 10];
+  const FIELDS = {
+    FILE_IDENTIFIER: 0,
+    ENDIANNESS: 12,
+    GL_TYPE: 16,
+    GL_TYPE_SIZE: 20,
+    GL_FORMAT: 24,
+    GL_INTERNAL_FORMAT: 28,
+    GL_BASE_INTERNAL_FORMAT: 32,
+    PIXEL_WIDTH: 36,
+    PIXEL_HEIGHT: 40,
+    PIXEL_DEPTH: 44,
+    NUMBER_OF_ARRAY_ELEMENTS: 48,
+    NUMBER_OF_FACES: 52,
+    NUMBER_OF_MIPMAP_LEVELS: 56,
+    BYTES_OF_KEY_VALUE_DATA: 60
+  };
+  const FILE_HEADER_SIZE = 64;
+  const ENDIANNESS = 67305985;
+  const TYPES_TO_BYTES_PER_COMPONENT = {
+    [5121 /* UNSIGNED_BYTE */]: 1,
+    [5123 /* UNSIGNED_SHORT */]: 2,
+    [5124 /* INT */]: 4,
+    [5125 /* UNSIGNED_INT */]: 4,
+    [5126 /* FLOAT */]: 4,
+    [36193 /* HALF_FLOAT */]: 8
+  };
+  const FORMATS_TO_COMPONENTS = {
+    [6408 /* RGBA */]: 4,
+    [6407 /* RGB */]: 3,
+    [33319 /* RG */]: 2,
+    [6403 /* RED */]: 1,
+    [6409 /* LUMINANCE */]: 1,
+    [6410 /* LUMINANCE_ALPHA */]: 2,
+    [6406 /* ALPHA */]: 1
+  };
+  const TYPES_TO_BYTES_PER_PIXEL = {
+    [32819 /* UNSIGNED_SHORT_4_4_4_4 */]: 2,
+    [32820 /* UNSIGNED_SHORT_5_5_5_1 */]: 2,
+    [33635 /* UNSIGNED_SHORT_5_6_5 */]: 2
+  };
+  const INTERNAL_FORMAT_TO_BYTES_PER_PIXEL = {
+    [33776 /* COMPRESSED_RGB_S3TC_DXT1_EXT */]: 0.5,
+    [33777 /* COMPRESSED_RGBA_S3TC_DXT1_EXT */]: 0.5,
+    [33778 /* COMPRESSED_RGBA_S3TC_DXT3_EXT */]: 1,
+    [33779 /* COMPRESSED_RGBA_S3TC_DXT5_EXT */]: 1,
+    [35916 /* COMPRESSED_SRGB_S3TC_DXT1_EXT */]: 0.5,
+    [35917 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT */]: 0.5,
+    [35918 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT */]: 1,
+    [35919 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT */]: 1,
+    [36283 /* COMPRESSED_RED_RGTC1_EXT */]: 0.5,
+    [36284 /* COMPRESSED_SIGNED_RED_RGTC1_EXT */]: 0.5,
+    [36285 /* COMPRESSED_RED_GREEN_RGTC2_EXT */]: 1,
+    [36286 /* COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT */]: 1,
+    [37488 /* COMPRESSED_R11_EAC */]: 0.5,
+    [37489 /* COMPRESSED_SIGNED_R11_EAC */]: 0.5,
+    [37490 /* COMPRESSED_RG11_EAC */]: 1,
+    [37491 /* COMPRESSED_SIGNED_RG11_EAC */]: 1,
+    [37492 /* COMPRESSED_RGB8_ETC2 */]: 0.5,
+    [37496 /* COMPRESSED_RGBA8_ETC2_EAC */]: 1,
+    [37493 /* COMPRESSED_SRGB8_ETC2 */]: 0.5,
+    [37497 /* COMPRESSED_SRGB8_ALPHA8_ETC2_EAC */]: 1,
+    [37494 /* COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2 */]: 0.5,
+    [37495 /* COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 */]: 0.5,
+    [37808 /* COMPRESSED_RGBA_ASTC_4x4_KHR */]: 1,
+    [37840 /* COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR */]: 1,
+    [37809 /* COMPRESSED_RGBA_ASTC_5x4_KHR */]: 0.8,
+    [37841 /* COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR */]: 0.8,
+    [37810 /* COMPRESSED_RGBA_ASTC_5x5_KHR */]: 0.64,
+    [37842 /* COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR */]: 0.64,
+    [37811 /* COMPRESSED_RGBA_ASTC_6x5_KHR */]: 0.53375,
+    [37843 /* COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR */]: 0.53375,
+    [37812 /* COMPRESSED_RGBA_ASTC_6x6_KHR */]: 0.445,
+    [37844 /* COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR */]: 0.445,
+    [37813 /* COMPRESSED_RGBA_ASTC_8x5_KHR */]: 0.4,
+    [37845 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR */]: 0.4,
+    [37814 /* COMPRESSED_RGBA_ASTC_8x6_KHR */]: 0.33375,
+    [37846 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR */]: 0.33375,
+    [37815 /* COMPRESSED_RGBA_ASTC_8x8_KHR */]: 0.25,
+    [37847 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR */]: 0.25,
+    [37816 /* COMPRESSED_RGBA_ASTC_10x5_KHR */]: 0.32,
+    [37848 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR */]: 0.32,
+    [37817 /* COMPRESSED_RGBA_ASTC_10x6_KHR */]: 0.26625,
+    [37849 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR */]: 0.26625,
+    [37818 /* COMPRESSED_RGBA_ASTC_10x8_KHR */]: 0.2,
+    [37850 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR */]: 0.2,
+    [37819 /* COMPRESSED_RGBA_ASTC_10x10_KHR */]: 0.16,
+    [37851 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR */]: 0.16,
+    [37820 /* COMPRESSED_RGBA_ASTC_12x10_KHR */]: 0.13375,
+    [37852 /* COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR */]: 0.13375,
+    [37821 /* COMPRESSED_RGBA_ASTC_12x12_KHR */]: 0.11125,
+    [37853 /* COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR */]: 0.11125,
+    [36492 /* COMPRESSED_RGBA_BPTC_UNORM_EXT */]: 1,
+    [36493 /* COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT */]: 1,
+    [36494 /* COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT */]: 1,
+    [36495 /* COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT */]: 1
+  };
+  const KTX = {
+    FILE_HEADER_SIZE,
+    FILE_IDENTIFIER,
+    FORMATS_TO_COMPONENTS,
+    INTERNAL_FORMAT_TO_BYTES_PER_PIXEL,
+    INTERNAL_FORMAT_TO_TEXTURE_FORMATS,
+    FIELDS,
+    TYPES_TO_BYTES_PER_COMPONENT,
+    TYPES_TO_BYTES_PER_PIXEL,
+    ENDIANNESS
+  };
+
+  "use strict";
+  function parseKTX(arrayBuffer, supportedFormats) {
+    const dataView = new DataView(arrayBuffer);
+    if (!validate(dataView)) {
+      throw new Error("Invalid KTX identifier in header");
+    }
+    const {
+      littleEndian,
+      glType,
+      glFormat,
+      glInternalFormat,
+      pixelWidth,
+      pixelHeight,
+      numberOfMipmapLevels,
+      offset
+    } = parseKTXHeader(dataView);
+    const textureFormat = KTX.INTERNAL_FORMAT_TO_TEXTURE_FORMATS[glInternalFormat];
+    if (!textureFormat) {
+      throw new Error(`Unknown texture format ${glInternalFormat}`);
+    }
+    if (!supportedFormats.includes(textureFormat)) {
+      throw new Error(`Unsupported texture format: ${textureFormat}, supportedFormats: ${supportedFormats}`);
+    }
+    const imagePixelByteSize = getImagePixelByteSize(glType, glFormat, glInternalFormat);
+    const imageBuffers = getImageBuffers(
+      dataView,
+      glType,
+      imagePixelByteSize,
+      pixelWidth,
+      pixelHeight,
+      offset,
+      numberOfMipmapLevels,
+      littleEndian
+    );
+    return {
+      format: textureFormat,
+      width: pixelWidth,
+      height: pixelHeight,
+      resource: imageBuffers,
+      alphaMode: "no-premultiply-alpha"
+    };
+  }
+  function getImageBuffers(dataView, glType, imagePixelByteSize, pixelWidth, pixelHeight, offset, numberOfMipmapLevels, littleEndian) {
+    const alignedWidth = pixelWidth + 3 & ~3;
+    const alignedHeight = pixelHeight + 3 & ~3;
+    let imagePixels = pixelWidth * pixelHeight;
+    if (glType === 0) {
+      imagePixels = alignedWidth * alignedHeight;
+    }
+    let mipByteSize = imagePixels * imagePixelByteSize;
+    let mipWidth = pixelWidth;
+    let mipHeight = pixelHeight;
+    let alignedMipWidth = alignedWidth;
+    let alignedMipHeight = alignedHeight;
+    let imageOffset = offset;
+    const imageBuffers = new Array(numberOfMipmapLevels);
+    for (let mipmapLevel = 0; mipmapLevel < numberOfMipmapLevels; mipmapLevel++) {
+      const imageSize = dataView.getUint32(imageOffset, littleEndian);
+      let elementOffset = imageOffset + 4;
+      imageBuffers[mipmapLevel] = new Uint8Array(dataView.buffer, elementOffset, mipByteSize);
+      elementOffset += mipByteSize;
+      imageOffset += imageSize + 4;
+      imageOffset = imageOffset % 4 !== 0 ? imageOffset + 4 - imageOffset % 4 : imageOffset;
+      mipWidth = mipWidth >> 1 || 1;
+      mipHeight = mipHeight >> 1 || 1;
+      alignedMipWidth = mipWidth + 4 - 1 & ~(4 - 1);
+      alignedMipHeight = mipHeight + 4 - 1 & ~(4 - 1);
+      mipByteSize = alignedMipWidth * alignedMipHeight * imagePixelByteSize;
+    }
+    return imageBuffers;
+  }
+  function getImagePixelByteSize(glType, glFormat, glInternalFormat) {
+    let imagePixelByteSize = KTX.INTERNAL_FORMAT_TO_BYTES_PER_PIXEL[glInternalFormat];
+    if (glType !== 0) {
+      if (KTX.TYPES_TO_BYTES_PER_COMPONENT[glType]) {
+        imagePixelByteSize = KTX.TYPES_TO_BYTES_PER_COMPONENT[glType] * KTX.FORMATS_TO_COMPONENTS[glFormat];
+      } else {
+        imagePixelByteSize = KTX.TYPES_TO_BYTES_PER_PIXEL[glType];
+      }
+    }
+    if (imagePixelByteSize === void 0) {
+      throw new Error("Unable to resolve the pixel format stored in the *.ktx file!");
+    }
+    return imagePixelByteSize;
+  }
+  function parseKTXHeader(dataView) {
+    const littleEndian = dataView.getUint32(KTX.FIELDS.ENDIANNESS, true) === KTX.ENDIANNESS;
+    const glType = dataView.getUint32(KTX.FIELDS.GL_TYPE, littleEndian);
+    const glFormat = dataView.getUint32(KTX.FIELDS.GL_FORMAT, littleEndian);
+    const glInternalFormat = dataView.getUint32(KTX.FIELDS.GL_INTERNAL_FORMAT, littleEndian);
+    const pixelWidth = dataView.getUint32(KTX.FIELDS.PIXEL_WIDTH, littleEndian);
+    const pixelHeight = dataView.getUint32(KTX.FIELDS.PIXEL_HEIGHT, littleEndian) || 1;
+    const pixelDepth = dataView.getUint32(KTX.FIELDS.PIXEL_DEPTH, littleEndian) || 1;
+    const numberOfArrayElements = dataView.getUint32(KTX.FIELDS.NUMBER_OF_ARRAY_ELEMENTS, littleEndian) || 1;
+    const numberOfFaces = dataView.getUint32(KTX.FIELDS.NUMBER_OF_FACES, littleEndian);
+    const numberOfMipmapLevels = dataView.getUint32(KTX.FIELDS.NUMBER_OF_MIPMAP_LEVELS, littleEndian);
+    const bytesOfKeyValueData = dataView.getUint32(KTX.FIELDS.BYTES_OF_KEY_VALUE_DATA, littleEndian);
+    if (pixelHeight === 0 || pixelDepth !== 1) {
+      throw new Error("Only 2D textures are supported");
+    }
+    if (numberOfFaces !== 1) {
+      throw new Error("CubeTextures are not supported by KTXLoader yet!");
+    }
+    if (numberOfArrayElements !== 1) {
+      throw new Error("WebGL does not support array textures");
+    }
+    return {
+      littleEndian,
+      glType,
+      glFormat,
+      glInternalFormat,
+      pixelWidth,
+      pixelHeight,
+      numberOfMipmapLevels,
+      offset: KTX.FILE_HEADER_SIZE + bytesOfKeyValueData
+    };
+  }
+  function validate(dataView) {
+    for (let i = 0; i < KTX.FILE_IDENTIFIER.length; i++) {
+      if (dataView.getUint8(i) !== KTX.FILE_IDENTIFIER[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  "use strict";
+  const loadKTX = {
+    extension: {
+      type: ExtensionType.LoadParser,
+      priority: LoaderParserPriority.High
+    },
+    name: "loadKTX",
+    test(url) {
+      return checkExtension(url, ".ktx");
+    },
+    async load(url, _asset, loader) {
+      const supportedTextures = await getSupportedTextureFormats();
+      const ktxResponse = await fetch(url);
+      const ktxArrayBuffer = await ktxResponse.arrayBuffer();
+      const textureOptions = parseKTX(ktxArrayBuffer, supportedTextures);
+      const compressedTextureSource = new CompressedSource(textureOptions);
+      return createTexture(compressedTextureSource, loader, url);
+    },
+    unload(texture) {
+      if (Array.isArray(texture)) {
+        texture.forEach((t) => t.destroy(true));
+      } else {
+        texture.destroy(true);
+      }
+    }
+  };
+
+  const WORKER_CODE = "(function () {\n    'use strict';\n\n    const converters = {\n      rgb8unorm: {\n        convertedFormat: \"rgba8unorm\",\n        convertFunction: convertRGBtoRGBA\n      },\n      \"rgb8unorm-srgb\": {\n        convertedFormat: \"rgba8unorm-srgb\",\n        convertFunction: convertRGBtoRGBA\n      }\n    };\n    function convertFormatIfRequired(textureOptions) {\n      const format = textureOptions.format;\n      if (converters[format]) {\n        const convertFunction = converters[format].convertFunction;\n        const levelBuffers = textureOptions.resource;\n        for (let i = 0; i < levelBuffers.length; i++) {\n          levelBuffers[i] = convertFunction(levelBuffers[i]);\n        }\n        textureOptions.format = converters[format].convertedFormat;\n      }\n    }\n    function convertRGBtoRGBA(levelBuffer) {\n      const pixelCount = levelBuffer.byteLength / 3;\n      const levelBufferWithAlpha = new Uint32Array(pixelCount);\n      for (let i = 0; i < pixelCount; ++i) {\n        levelBufferWithAlpha[i] = levelBuffer[i * 3] + (levelBuffer[i * 3 + 1] << 8) + (levelBuffer[i * 3 + 2] << 16) + 4278190080;\n      }\n      return new Uint8Array(levelBufferWithAlpha.buffer);\n    }\n\n    function createLevelBuffersFromKTX(ktxTexture) {\n      const levelBuffers = [];\n      for (let i = 0; i < ktxTexture.numLevels; i++) {\n        const imageData = ktxTexture.getImageData(i, 0, 0);\n        const levelBuffer = new Uint8Array(imageData.byteLength);\n        levelBuffer.set(imageData);\n        levelBuffers.push(levelBuffer);\n      }\n      return levelBuffers;\n    }\n\n    const glFormatToGPUFormatMap = {\n      6408: \"rgba8unorm\",\n      32856: \"bgra8unorm\",\n      //\n      32857: \"rgb10a2unorm\",\n      33189: \"depth16unorm\",\n      33190: \"depth24plus\",\n      33321: \"r8unorm\",\n      33323: \"rg8unorm\",\n      33325: \"r16float\",\n      33326: \"r32float\",\n      33327: \"rg16float\",\n      33328: \"rg32float\",\n      33329: \"r8sint\",\n      33330: \"r8uint\",\n      33331: \"r16sint\",\n      33332: \"r16uint\",\n      33333: \"r32sint\",\n      33334: \"r32uint\",\n      33335: \"rg8sint\",\n      33336: \"rg8uint\",\n      33337: \"rg16sint\",\n      33338: \"rg16uint\",\n      33339: \"rg32sint\",\n      33340: \"rg32uint\",\n      33778: \"bc2-rgba-unorm\",\n      33779: \"bc3-rgba-unorm\",\n      34836: \"rgba32float\",\n      34842: \"rgba16float\",\n      35056: \"depth24plus-stencil8\",\n      35898: \"rg11b10ufloat\",\n      35901: \"rgb9e5ufloat\",\n      35907: \"rgba8unorm-srgb\",\n      // bgra8unorm-srgb\n      36012: \"depth32float\",\n      36013: \"depth32float-stencil8\",\n      36168: \"stencil8\",\n      36208: \"rgba32uint\",\n      36214: \"rgba16uint\",\n      36220: \"rgba8uint\",\n      36226: \"rgba32sint\",\n      36232: \"rgba16sint\",\n      36238: \"rgba8sint\",\n      36492: \"bc7-rgba-unorm\",\n      36756: \"r8snorm\",\n      36757: \"rg8snorm\",\n      36759: \"rgba8snorm\",\n      37496: \"etc2-rgba8unorm\",\n      37808: \"astc-4x4-unorm\"\n    };\n    function glFormatToGPUFormat(glInternalFormat) {\n      const format = glFormatToGPUFormatMap[glInternalFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported glInternalFormat: ${glInternalFormat}`);\n    }\n\n    const vkFormatToGPUFormatMap = {\n      23: \"rgb8unorm\",\n      // VK_FORMAT_R8G8B8_UNORM\n      37: \"rgba8unorm\",\n      // VK_FORMAT_R8G8B8A8_UNORM\n      43: \"rgba8unorm-srgb\"\n      // VK_FORMAT_R8G8B8A8_SRGB\n      // TODO add more!\n    };\n    function vkFormatToGPUFormat(vkFormat) {\n      const format = vkFormatToGPUFormatMap[vkFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported VkFormat: ${vkFormat}`);\n    }\n\n    function getTextureFormatFromKTXTexture(ktxTexture) {\n      if (ktxTexture.classId === 2) {\n        return vkFormatToGPUFormat(ktxTexture.vkFormat);\n      }\n      return glFormatToGPUFormat(ktxTexture.glInternalformat);\n    }\n\n    const gpuFormatToBasisTranscoderFormatMap = {\n      \"bc3-rgba-unorm\": \"BC3_RGBA\",\n      \"bc7-rgba-unorm\": \"BC7_M5_RGBA\",\n      \"etc2-rgba8unorm\": \"ETC2_RGBA\",\n      \"astc-4x4-unorm\": \"ASTC_4x4_RGBA\",\n      // Uncompressed\n      rgba8unorm: \"RGBA32\",\n      rg11b10ufloat: \"R11F_G11F_B10F\"\n    };\n    function gpuFormatToKTXBasisTranscoderFormat(transcoderFormat) {\n      const format = gpuFormatToBasisTranscoderFormatMap[transcoderFormat];\n      if (format) {\n        return format;\n      }\n      throw new Error(`Unsupported transcoderFormat: ${transcoderFormat}`);\n    }\n\n    const settings = {\n      jsUrl: \"\",\n      wasmUrl: \"\"\n    };\n    let basisTranscoderFormat;\n    let basisTranscodedTextureFormat;\n    let ktxPromise;\n    async function getKTX() {\n      if (!ktxPromise) {\n        const absoluteJsUrl = new URL(settings.jsUrl, location.origin).href;\n        const absoluteWasmUrl = new URL(settings.wasmUrl, location.origin).href;\n        importScripts(absoluteJsUrl);\n        ktxPromise = new Promise((resolve) => {\n          LIBKTX({\n            locateFile: (_file) => absoluteWasmUrl\n          }).then((libktx) => {\n            resolve(libktx);\n          });\n        });\n      }\n      return ktxPromise;\n    }\n    async function fetchKTXTexture(url, ktx) {\n      const ktx2Response = await fetch(url);\n      if (ktx2Response.ok) {\n        const ktx2ArrayBuffer = await ktx2Response.arrayBuffer();\n        return new ktx.ktxTexture(new Uint8Array(ktx2ArrayBuffer));\n      }\n      throw new Error(`Failed to load KTX(2) texture: ${url}`);\n    }\n    const preferredTranscodedFormat = [\n      \"bc7-rgba-unorm\",\n      \"astc-4x4-unorm\",\n      \"etc2-rgba8unorm\",\n      \"bc3-rgba-unorm\",\n      \"rgba8unorm\"\n    ];\n    async function load(url) {\n      const ktx = await getKTX();\n      const ktxTexture = await fetchKTXTexture(url, ktx);\n      let format;\n      if (ktxTexture.needsTranscoding) {\n        format = basisTranscodedTextureFormat;\n        const transcodeFormat = ktx.TranscodeTarget[basisTranscoderFormat];\n        const result = ktxTexture.transcodeBasis(transcodeFormat, 0);\n        if (result !== ktx.ErrorCode.SUCCESS) {\n          throw new Error(\"Unable to transcode basis texture.\");\n        }\n      } else {\n        format = getTextureFormatFromKTXTexture(ktxTexture);\n      }\n      const levelBuffers = createLevelBuffersFromKTX(ktxTexture);\n      const textureOptions = {\n        width: ktxTexture.baseWidth,\n        height: ktxTexture.baseHeight,\n        format,\n        mipLevelCount: ktxTexture.numLevels,\n        resource: levelBuffers,\n        alphaMode: \"no-premultiply-alpha\"\n      };\n      convertFormatIfRequired(textureOptions);\n      return textureOptions;\n    }\n    async function init(jsUrl, wasmUrl, supportedTextures) {\n      if (jsUrl)\n        settings.jsUrl = jsUrl;\n      if (wasmUrl)\n        settings.wasmUrl = wasmUrl;\n      basisTranscodedTextureFormat = preferredTranscodedFormat.filter((format) => supportedTextures.includes(format))[0];\n      basisTranscoderFormat = gpuFormatToKTXBasisTranscoderFormat(basisTranscodedTextureFormat);\n      await getKTX();\n    }\n    const messageHandlers = {\n      init: async (data) => {\n        const { jsUrl, wasmUrl, supportedTextures } = data;\n        await init(jsUrl, wasmUrl, supportedTextures);\n      },\n      load: async (data) => {\n        var _a;\n        try {\n          const textureOptions = await load(data.url);\n          return {\n            type: \"load\",\n            url: data.url,\n            success: true,\n            textureOptions,\n            transferables: (_a = textureOptions.resource) == null ? void 0 : _a.map((arr) => arr.buffer)\n          };\n        } catch (e) {\n          throw e;\n        }\n      }\n    };\n    self.onmessage = async (messageEvent) => {\n      var _a;\n      const message = messageEvent.data;\n      const response = await ((_a = messageHandlers[message.type]) == null ? void 0 : _a.call(messageHandlers, message));\n      if (response) {\n        self.postMessage(response, response.transferables);\n      }\n    };\n\n})();\n";
   let WORKER_URL = null;
   class WorkerInstance
   {
@@ -26462,7 +28103,7 @@ ${e}`);
   "use strict";
   let ktxWorker;
   const urlHash = {};
-  function getKTXWorker(supportedTextures) {
+  function getKTX2Worker(supportedTextures) {
     if (!ktxWorker) {
       ktxWorker = new WorkerInstance().worker;
       ktxWorker.onmessage = (messageEvent) => {
@@ -26482,7 +28123,7 @@ ${e}`);
     return ktxWorker;
   }
   function loadKTX2onWorker(url, supportedTextures) {
-    const ktxWorker2 = getKTXWorker(supportedTextures);
+    const ktxWorker2 = getKTX2Worker(supportedTextures);
     return new Promise((resolve) => {
       urlHash[url] = resolve;
       ktxWorker2.postMessage({ type: "load", url });
@@ -26490,14 +28131,14 @@ ${e}`);
   }
 
   "use strict";
-  const loadKTX = {
+  const loadKTX2 = {
     extension: {
       type: ExtensionType.LoadParser,
       priority: LoaderParserPriority.High
     },
-    name: "loadKTX",
+    name: "loadKTX2",
     test(url) {
-      return checkExtension(url, [".ktx2", ".ktx"]);
+      return checkExtension(url, ".ktx2");
     },
     async load(url, _asset, loader) {
       const supportedTextures = await getSupportedTextureFormats();
@@ -27255,7 +28896,9 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this.resources.alphaUniforms.uniforms.uAlpha = value;
     }
   };
+  /** Default filter options */
   _AlphaFilter.defaultOptions = {
+    /** Amount of alpha from 0 to 1, where 0 is transparent */
     alpha: 1
   };
   let AlphaFilter = _AlphaFilter;
@@ -27492,7 +29135,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     }
     /**
      * Sets the quality of the blur by modifying the number of passes. More passes means higher
-     * quality bluring but the lower the performance.
+     * quality blurring but the lower the performance.
      * @default 4
      */
     get quality() {
@@ -28849,6 +30492,13 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       const d = (this.x3 - this.x2) * (y - this.y2) - (this.y3 - this.y2) * (x - this.x2);
       return d === 0 || d < 0 === s + t <= 0;
     }
+    /**
+     * Checks whether the x and y coordinates given are contained within this triangle including the stroke.
+     * @param pointX - The X coordinate of the point to test
+     * @param pointY - The Y coordinate of the point to test
+     * @param strokeWidth - The width of the line to check
+     * @returns Whether the x/y coordinates are within this triangle
+     */
     strokeContains(pointX, pointY, strokeWidth) {
       const halfStrokeWidth = strokeWidth / 2;
       const halfStrokeWidthSquared = halfStrokeWidth * halfStrokeWidth;
@@ -29084,7 +30734,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._geometry.on("update", this.onViewUpdate, this);
       this.roundPixels = roundPixels != null ? roundPixels : false;
     }
-    /** Whether or not to round the x/y position of the mesh. */
+    /**
+     *  Whether or not to round the x/y position of the mesh.
+     * @type {boolean}
+     */
     get roundPixels() {
       return !!this._roundPixels;
     }
@@ -29150,12 +30803,24 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       return false;
     }
+    /**
+     * The local bounds of the mesh.
+     * @type {rendering.Bounds}
+     */
     get bounds() {
       return this._geometry.bounds;
     }
+    /**
+     * Adds the bounds of this object to the bounds object.
+     * @param bounds - The output bounds object.
+     */
     addBounds(bounds) {
       bounds.addBounds(this.geometry.bounds);
     }
+    /**
+     * Checks if the object contains the given point.
+     * @param point - The point to check
+     */
     containsPoint(point) {
       const { x, y } = point;
       if (!this.bounds.containsPoint(x, y))
@@ -29277,8 +30942,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     }
     /**
      * Updates the object transform for rendering.
-     * @param ticker - {Ticker} - current delta time
-     * @param ticker.deltaTime - the delta time since the last tick
+     * @param ticker - the ticker to use to update the object.
      */
     update(ticker) {
       if (!this._playing) {
@@ -29605,7 +31269,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._height = height != null ? height : texture.height;
       this._tileTransform = new Transform({
         observer: {
-          _onUpdate: () => this.onTilingSpriteUpdate()
+          _onUpdate: () => this._onTilingSpriteUpdate()
         }
       });
       if (anchor)
@@ -29691,13 +31355,20 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     get tileTransform() {
       return this._tileTransform;
     }
-    /** Whether or not to round the x/y position of the tiling sprite. */
+    /**
+     *  Whether or not to round the x/y position of the sprite.
+     * @type {boolean}
+     */
     get roundPixels() {
       return !!this._roundPixels;
     }
     set roundPixels(value) {
       this._roundPixels = value ? 1 : 0;
     }
+    /**
+     * The local bounds of the sprite.
+     * @type {rendering.Bounds}
+     */
     get bounds() {
       if (this._boundsDirty) {
         this._updateBounds();
@@ -29709,7 +31380,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       if (this._texture === value)
         return;
       this._texture = value;
-      this.onTilingSpriteUpdate();
+      this._onTilingSpriteUpdate();
     }
     /** The texture that the sprite is using. */
     get texture() {
@@ -29718,14 +31389,14 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     /** The width of the tiling area. */
     set width(value) {
       this._width = value;
-      this.onTilingSpriteUpdate();
+      this._onTilingSpriteUpdate();
     }
     get width() {
       return this._width;
     }
     set height(value) {
       this._height = value;
-      this.onTilingSpriteUpdate();
+      this._onTilingSpriteUpdate();
     }
     /** The height of the tiling area. */
     get height() {
@@ -29741,6 +31412,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       bounds.maxY = -anchor._y * height;
       bounds.minY = bounds.maxY + height;
     }
+    /**
+     * Adds the bounds of this object to the bounds object.
+     * @param bounds - The output bounds object.
+     */
     addBounds(bounds) {
       const _bounds = this.bounds;
       bounds.addFrame(
@@ -29750,6 +31425,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
         _bounds.maxY
       );
     }
+    /**
+     * Checks if the object contains the given point.
+     * @param point - The point to check
+     */
     containsPoint(point) {
       const width = this.bounds.minX;
       const height = this.bounds.minY;
@@ -29762,10 +31441,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       return false;
     }
-    /**
-     * @internal
-     */
-    onTilingSpriteUpdate() {
+    _onTilingSpriteUpdate() {
       this._boundsDirty = true;
       this._didTilingSpriteUpdate = true;
       this._didChangeId += 1 << 12;
@@ -29796,12 +31472,19 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._texture = null;
     }
   };
+  /** default options for the TilingSprite */
   _TilingSprite.defaultOptions = {
+    /** The texture to use for the sprite. */
     texture: Texture.EMPTY,
+    /** The anchor point of the sprite */
     anchor: { x: 0, y: 0 },
+    /** The offset of the image that is being tiled. */
     tilePosition: { x: 0, y: 0 },
+    /** Scaling of the image that is being tiled. */
     tileScale: { x: 1, y: 1 },
+    /** The rotation of the image that is being tiled. */
     tileRotation: 0,
+    /** TODO */
     applyAnchorToTexture: false
   };
   let TilingSprite = _TilingSprite;
@@ -29840,8 +31523,11 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       const _a = options, { text, resolution, style, anchor, width, height, roundPixels } = _a, rest = __objRest$5(_a, ["text", "resolution", "style", "anchor", "width", "height", "roundPixels"]);
       super(__spreadValues$k({}, rest));
       this.batched = true;
+      /**
+       * The resolution / device pixel ratio of the canvas.
+       * @default 1
+       */
       this.resolution = null;
-      /** @internal */
       this._didTextUpdate = true;
       this._roundPixels = 0;
       this._bounds = new Bounds();
@@ -29887,13 +31573,17 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     set anchor(value) {
       typeof value === "number" ? this._anchor.set(value) : this._anchor.copyFrom(value);
     }
-    /** Whether or not to round the x/y position of the sprite. */
+    /**
+     *  Whether or not to round the x/y position of the text.
+     * @type {boolean}
+     */
     get roundPixels() {
       return !!this._roundPixels;
     }
     set roundPixels(value) {
       this._roundPixels = value ? 1 : 0;
     }
+    /** Set the copy for the text object. To split a line you can use '\n'. */
     set text(value) {
       value = value.toString();
       if (this._text === value)
@@ -29907,6 +31597,21 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     get style() {
       return this._style;
     }
+    /**
+     * Set the style of the text.
+     *
+     * Set up an event listener to listen for changes on the style object and mark the text as dirty.
+     *
+     * If setting the `style` can also be partial {@link AnyTextStyleOptions}.
+     * @type {
+     * text.TextStyle |
+     * Partial<text.TextStyle> |
+     * text.TextStyleOptions |
+     * text.HTMLTextStyle |
+     * Partial<text.HTMLTextStyle> |
+     * text.HTMLTextStyleOptions
+     * }
+     */
     set style(style) {
       var _a;
       style = style || {};
@@ -29919,6 +31624,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._style.on("update", this.onViewUpdate, this);
       this.onViewUpdate();
     }
+    /**
+     * The local bounds of the Text.
+     * @type {rendering.Bounds}
+     */
     get bounds() {
       if (this._boundsDirty) {
         this._updateBounds();
@@ -29978,6 +31687,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
         this._setHeight(convertedHeight, this.bounds.height);
       }
     }
+    /**
+     * Adds the bounds of this text to the bounds object.
+     * @param bounds - The output bounds object.
+     */
     addBounds(bounds) {
       const _bounds = this.bounds;
       bounds.addFrame(
@@ -29987,6 +31700,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
         _bounds.maxY
       );
     }
+    /**
+     * Checks if the text contains the given point.
+     * @param point - The point to check
+     */
     containsPoint(point) {
       const width = this.bounds.maxX;
       const height = this.bounds.maxY;
@@ -29999,7 +31716,6 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       return false;
     }
-    /** @internal */
     onViewUpdate() {
       this._didChangeId += 1 << 12;
       if (this.didViewUpdate)
@@ -30011,7 +31727,6 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
         this.renderGroup.onChildViewUpdate(this);
       }
     }
-    /** @internal */
     _getKey() {
       return `${this.text}:${this._style.styleKey}`;
     }
@@ -30243,6 +31958,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       (_a = this.cssOverrides) != null ? _a : this.cssOverrides = options.cssOverrides;
       this.tagStyles = (_b = options.tagStyles) != null ? _b : {};
     }
+    /** List of style overrides that will be applied to the HTML text. */
     set cssOverrides(value) {
       this._cssOverrides = value instanceof Array ? value : [value];
       this.update();
@@ -30258,6 +31974,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._cssStyle = null;
       super.update();
     }
+    /**
+     * Creates a new HTMLTextStyle object with the same values as this one.
+     * @returns New cloned HTMLTextStyle object
+     */
     clone() {
       return new HTMLTextStyle({
         align: this.align,
@@ -31416,6 +33136,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
         atc: gl.getExtension("WEBGL_compressed_texture_atc"),
         astc: gl.getExtension("WEBGL_compressed_texture_astc"),
         bptc: gl.getExtension("EXT_texture_compression_bptc"),
+        rgtc: gl.getExtension("EXT_texture_compression_rgtc"),
         loseContext: gl.getExtension("WEBGL_lose_context")
       };
       if (this.webGLVersion === 1) {
@@ -32171,702 +33892,6 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   }
 
   "use strict";
-  class GlRenderTargetAdaptor {
-    constructor() {
-      this._clearColorCache = [0, 0, 0, 0];
-      this._viewPortCache = new Rectangle();
-    }
-    init(renderer, renderTargetSystem) {
-      this._renderer = renderer;
-      this._renderTargetSystem = renderTargetSystem;
-      renderer.runners.contextChange.add(this);
-    }
-    contextChange() {
-      this._clearColorCache = [0, 0, 0, 0];
-      this._viewPortCache = new Rectangle();
-    }
-    copyToTexture(sourceRenderSurfaceTexture, destinationTexture, origin, size) {
-      const renderTargetSystem = this._renderTargetSystem;
-      const renderer = this._renderer;
-      const glRenderTarget = renderTargetSystem.getGpuRenderTarget(sourceRenderSurfaceTexture);
-      const gl = renderer.gl;
-      this.finishRenderPass(sourceRenderSurfaceTexture);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, glRenderTarget.resolveTargetFramebuffer);
-      renderer.texture.bind(destinationTexture, 0);
-      gl.copyTexSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        origin.x,
-        origin.y,
-        size.width,
-        size.height
-      );
-      return destinationTexture;
-    }
-    startRenderPass(renderTarget, clear = true, clearColor, viewport) {
-      const renderTargetSystem = this._renderTargetSystem;
-      const source = renderTarget.colorTexture;
-      const gpuRenderTarget = renderTargetSystem.getGpuRenderTarget(renderTarget);
-      let viewPortY = viewport.y;
-      if (renderTarget.isRoot) {
-        viewPortY = source.pixelHeight - viewport.height;
-      }
-      renderTarget.colorTextures.forEach((texture) => {
-        this._renderer.texture.unbind(texture);
-      });
-      const gl = this._renderer.gl;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, gpuRenderTarget.framebuffer);
-      const viewPortCache = this._viewPortCache;
-      if (viewPortCache.x !== viewport.x || viewPortCache.y !== viewPortY || viewPortCache.width !== viewport.width || viewPortCache.height !== viewport.height) {
-        viewPortCache.x = viewport.x;
-        viewPortCache.y = viewPortY;
-        viewPortCache.width = viewport.width;
-        viewPortCache.height = viewport.height;
-        gl.viewport(
-          viewport.x,
-          viewPortY,
-          viewport.width,
-          viewport.height
-        );
-      }
-      if (!gpuRenderTarget.depthStencilRenderBuffer && (renderTarget.stencil || renderTarget.depth)) {
-        this._initStencil(gpuRenderTarget);
-      }
-      this.clear(renderTarget, clear, clearColor);
-    }
-    finishRenderPass(renderTarget) {
-      const renderTargetSystem = this._renderTargetSystem;
-      const glRenderTarget = renderTargetSystem.getGpuRenderTarget(renderTarget);
-      if (!glRenderTarget.msaa)
-        return;
-      const gl = this._renderer.gl;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, glRenderTarget.resolveTargetFramebuffer);
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, glRenderTarget.framebuffer);
-      gl.blitFramebuffer(
-        0,
-        0,
-        glRenderTarget.width,
-        glRenderTarget.height,
-        0,
-        0,
-        glRenderTarget.width,
-        glRenderTarget.height,
-        gl.COLOR_BUFFER_BIT,
-        gl.NEAREST
-      );
-      gl.bindFramebuffer(gl.FRAMEBUFFER, glRenderTarget.framebuffer);
-    }
-    initGpuRenderTarget(renderTarget) {
-      const renderer = this._renderer;
-      const gl = renderer.gl;
-      const glRenderTarget = new GlRenderTarget();
-      if (CanvasSource.test(renderTarget.colorTexture.resource)) {
-        glRenderTarget.framebuffer = null;
-        return glRenderTarget;
-      }
-      this._initColor(renderTarget, glRenderTarget);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      return glRenderTarget;
-    }
-    clear(_renderTarget, clear, clearColor) {
-      if (!clear)
-        return;
-      const renderTargetSystem = this._renderTargetSystem;
-      if (typeof clear === "boolean") {
-        clear = clear ? CLEAR.ALL : CLEAR.NONE;
-      }
-      const gl = this._renderer.gl;
-      if (clear & CLEAR.COLOR) {
-        clearColor != null ? clearColor : clearColor = renderTargetSystem.defaultClearColor;
-        const clearColorCache = this._clearColorCache;
-        const clearColorArray = clearColor;
-        if (clearColorCache[0] !== clearColorArray[0] || clearColorCache[1] !== clearColorArray[1] || clearColorCache[2] !== clearColorArray[2] || clearColorCache[3] !== clearColorArray[3]) {
-          clearColorCache[0] = clearColorArray[0];
-          clearColorCache[1] = clearColorArray[1];
-          clearColorCache[2] = clearColorArray[2];
-          clearColorCache[3] = clearColorArray[3];
-          gl.clearColor(clearColorArray[0], clearColorArray[1], clearColorArray[2], clearColorArray[3]);
-        }
-      }
-      gl.clear(clear);
-    }
-    resizeGpuRenderTarget(renderTarget) {
-      if (renderTarget.isRoot)
-        return;
-      const renderTargetSystem = this._renderTargetSystem;
-      const glRenderTarget = renderTargetSystem.getGpuRenderTarget(renderTarget);
-      this._resizeColor(renderTarget, glRenderTarget);
-      if (renderTarget.stencil) {
-        this._resizeStencil(glRenderTarget);
-      }
-    }
-    _initColor(renderTarget, glRenderTarget) {
-      const renderer = this._renderer;
-      const gl = renderer.gl;
-      const resolveTargetFramebuffer = gl.createFramebuffer();
-      glRenderTarget.resolveTargetFramebuffer = resolveTargetFramebuffer;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, resolveTargetFramebuffer);
-      glRenderTarget.width = renderTarget.colorTexture.source.pixelWidth;
-      glRenderTarget.height = renderTarget.colorTexture.source.pixelHeight;
-      renderTarget.colorTextures.forEach((colorTexture, i) => {
-        const source = colorTexture.source;
-        if (source.antialias) {
-          if (renderer.context.supports.msaa) {
-            glRenderTarget.msaa = true;
-          } else {
-            warn("[RenderTexture] Antialiasing on textures is not supported in WebGL1");
-          }
-        }
-        renderer.texture.bindSource(source, 0);
-        const glSource = renderer.texture.getGlSource(source);
-        const glTexture = glSource.texture;
-        gl.framebufferTexture2D(
-          gl.FRAMEBUFFER,
-          gl.COLOR_ATTACHMENT0 + i,
-          3553,
-          // texture.target,
-          glTexture,
-          0
-        );
-      });
-      if (glRenderTarget.msaa) {
-        const viewFramebuffer = gl.createFramebuffer();
-        glRenderTarget.framebuffer = viewFramebuffer;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, viewFramebuffer);
-        renderTarget.colorTextures.forEach((_, i) => {
-          const msaaRenderBuffer = gl.createRenderbuffer();
-          glRenderTarget.msaaRenderBuffer[i] = msaaRenderBuffer;
-        });
-      } else {
-        glRenderTarget.framebuffer = resolveTargetFramebuffer;
-      }
-      this._resizeColor(renderTarget, glRenderTarget);
-    }
-    _resizeColor(renderTarget, glRenderTarget) {
-      const source = renderTarget.colorTexture.source;
-      glRenderTarget.width = source.pixelWidth;
-      glRenderTarget.height = source.pixelHeight;
-      renderTarget.colorTextures.forEach((colorTexture, i) => {
-        if (i === 0)
-          return;
-        colorTexture.source.resize(source.width, source.height, source._resolution);
-      });
-      if (glRenderTarget.msaa) {
-        const renderer = this._renderer;
-        const gl = renderer.gl;
-        const viewFramebuffer = glRenderTarget.framebuffer;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, viewFramebuffer);
-        renderTarget.colorTextures.forEach((colorTexture, i) => {
-          const source2 = colorTexture.source;
-          renderer.texture.bindSource(source2, 0);
-          const glSource = renderer.texture.getGlSource(source2);
-          const glInternalFormat = glSource.internalFormat;
-          const msaaRenderBuffer = glRenderTarget.msaaRenderBuffer[i];
-          gl.bindRenderbuffer(
-            gl.RENDERBUFFER,
-            msaaRenderBuffer
-          );
-          gl.renderbufferStorageMultisample(
-            gl.RENDERBUFFER,
-            4,
-            glInternalFormat,
-            source2.pixelWidth,
-            source2.pixelHeight
-          );
-          gl.framebufferRenderbuffer(
-            gl.FRAMEBUFFER,
-            gl.COLOR_ATTACHMENT0 + i,
-            gl.RENDERBUFFER,
-            msaaRenderBuffer
-          );
-        });
-      }
-    }
-    _initStencil(glRenderTarget) {
-      if (glRenderTarget.framebuffer === null)
-        return;
-      const gl = this._renderer.gl;
-      const depthStencilRenderBuffer = gl.createRenderbuffer();
-      glRenderTarget.depthStencilRenderBuffer = depthStencilRenderBuffer;
-      gl.bindRenderbuffer(
-        gl.RENDERBUFFER,
-        depthStencilRenderBuffer
-      );
-      gl.framebufferRenderbuffer(
-        gl.FRAMEBUFFER,
-        gl.DEPTH_STENCIL_ATTACHMENT,
-        gl.RENDERBUFFER,
-        depthStencilRenderBuffer
-      );
-      this._resizeStencil(glRenderTarget);
-    }
-    _resizeStencil(glRenderTarget) {
-      const gl = this._renderer.gl;
-      gl.bindRenderbuffer(
-        gl.RENDERBUFFER,
-        glRenderTarget.depthStencilRenderBuffer
-      );
-      if (glRenderTarget.msaa) {
-        gl.renderbufferStorageMultisample(
-          gl.RENDERBUFFER,
-          4,
-          gl.DEPTH24_STENCIL8,
-          glRenderTarget.width,
-          glRenderTarget.height
-        );
-      } else {
-        gl.renderbufferStorage(
-          gl.RENDERBUFFER,
-          this._renderer.context.webGLVersion === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL,
-          glRenderTarget.width,
-          glRenderTarget.height
-        );
-      }
-    }
-  }
-
-  "use strict";
-  function calculateProjection(pm, x, y, width, height, flipY) {
-    const sign = flipY ? 1 : -1;
-    pm.identity();
-    pm.a = 1 / width * 2;
-    pm.d = sign * (1 / height * 2);
-    pm.tx = -1 - x * pm.a;
-    pm.ty = -sign - y * pm.d;
-    return pm;
-  }
-
-  "use strict";
-  var __defProp$h = Object.defineProperty;
-  var __getOwnPropSymbols$h = Object.getOwnPropertySymbols;
-  var __hasOwnProp$h = Object.prototype.hasOwnProperty;
-  var __propIsEnum$h = Object.prototype.propertyIsEnumerable;
-  var __defNormalProp$h = (obj, key, value) => key in obj ? __defProp$h(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-  var __spreadValues$h = (a, b) => {
-    for (var prop in b || (b = {}))
-      if (__hasOwnProp$h.call(b, prop))
-        __defNormalProp$h(a, prop, b[prop]);
-    if (__getOwnPropSymbols$h)
-      for (var prop of __getOwnPropSymbols$h(b)) {
-        if (__propIsEnum$h.call(b, prop))
-          __defNormalProp$h(a, prop, b[prop]);
-      }
-    return a;
-  };
-  const canvasCache = /* @__PURE__ */ new Map();
-  function getCanvasTexture(canvas, options) {
-    if (!canvasCache.has(canvas)) {
-      const texture = new Texture({
-        source: new CanvasSource(__spreadValues$h({
-          resource: canvas
-        }, options))
-      });
-      const onDestroy = () => {
-        if (canvasCache.get(canvas) === texture) {
-          canvasCache.delete(canvas);
-        }
-      };
-      texture.once("destroy", onDestroy);
-      texture.source.once("destroy", onDestroy);
-      canvasCache.set(canvas, texture);
-    }
-    return canvasCache.get(canvas);
-  }
-  function hasCachedCanvasTexture(canvas) {
-    return canvasCache.has(canvas);
-  }
-
-  "use strict";
-  function isRenderingToScreen(renderTarget) {
-    const resource = renderTarget.colorTexture.source.resource;
-    return globalThis.HTMLCanvasElement && resource instanceof HTMLCanvasElement && document.body.contains(resource);
-  }
-
-  "use strict";
-  var __defProp$g = Object.defineProperty;
-  var __getOwnPropSymbols$g = Object.getOwnPropertySymbols;
-  var __hasOwnProp$g = Object.prototype.hasOwnProperty;
-  var __propIsEnum$g = Object.prototype.propertyIsEnumerable;
-  var __defNormalProp$g = (obj, key, value) => key in obj ? __defProp$g(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-  var __spreadValues$g = (a, b) => {
-    for (var prop in b || (b = {}))
-      if (__hasOwnProp$g.call(b, prop))
-        __defNormalProp$g(a, prop, b[prop]);
-    if (__getOwnPropSymbols$g)
-      for (var prop of __getOwnPropSymbols$g(b)) {
-        if (__propIsEnum$g.call(b, prop))
-          __defNormalProp$g(a, prop, b[prop]);
-      }
-    return a;
-  };
-  const _RenderTarget = class _RenderTarget {
-    constructor(descriptor = {}) {
-      this.uid = uid("renderTarget");
-      /**
-       * An array of textures that can be written to by the GPU - mostly this has one texture in Pixi, but you could
-       * write to multiple if required! (eg deferred lighting)
-       */
-      this.colorTextures = [];
-      this.dirtyId = 0;
-      this.isRoot = false;
-      this._size = new Float32Array(2);
-      descriptor = __spreadValues$g(__spreadValues$g({}, _RenderTarget.defaultOptions), descriptor);
-      this.stencil = descriptor.stencil;
-      this.depth = descriptor.depth;
-      this.isRoot = descriptor.isRoot;
-      if (typeof descriptor.colorTextures === "number") {
-        for (let i = 0; i < descriptor.colorTextures; i++) {
-          this.colorTextures.push(
-            new TextureSource({
-              width: descriptor.width,
-              height: descriptor.height,
-              resolution: descriptor.resolution,
-              antialias: descriptor.antialias
-            })
-          );
-        }
-      } else {
-        this.colorTextures = [...descriptor.colorTextures.map((texture) => texture.source)];
-        const colorSource = this.colorTexture.source;
-        this.resize(colorSource.width, colorSource.height, colorSource._resolution);
-      }
-      this.colorTexture.source.on("resize", this.onSourceResize, this);
-      if (descriptor.depthStencilTexture || this.stencil) {
-        if (descriptor.depthStencilTexture instanceof Texture || descriptor.depthStencilTexture instanceof TextureSource) {
-          this.depthStencilTexture = descriptor.depthStencilTexture.source;
-        } else {
-          this.ensureDepthStencilTexture();
-        }
-      }
-    }
-    get size() {
-      const _size = this._size;
-      _size[0] = this.pixelWidth;
-      _size[1] = this.pixelHeight;
-      return _size;
-    }
-    get width() {
-      return this.colorTexture.source.width;
-    }
-    get height() {
-      return this.colorTexture.source.height;
-    }
-    get pixelWidth() {
-      return this.colorTexture.source.pixelWidth;
-    }
-    get pixelHeight() {
-      return this.colorTexture.source.pixelHeight;
-    }
-    get resolution() {
-      return this.colorTexture.source._resolution;
-    }
-    get colorTexture() {
-      return this.colorTextures[0];
-    }
-    onSourceResize(source) {
-      this.resize(source.width, source.height, source._resolution, true);
-    }
-    /**
-     * This will ensure a depthStencil texture is created for this render target.
-     * Most likely called by the mask system to make sure we have stencil buffer added.
-     * @internal
-     */
-    ensureDepthStencilTexture() {
-      if (!this.depthStencilTexture) {
-        this.depthStencilTexture = new TextureSource({
-          width: this.width,
-          height: this.height,
-          resolution: this.resolution,
-          format: "depth24plus-stencil8",
-          autoGenerateMipmaps: false,
-          antialias: false,
-          mipLevelCount: 1
-          // sampleCount: handled by the render target system..
-        });
-      }
-    }
-    resize(width, height, resolution = this.resolution, skipColorTexture = false) {
-      this.dirtyId++;
-      this.colorTextures.forEach((colorTexture, i) => {
-        if (skipColorTexture && i === 0)
-          return;
-        colorTexture.source.resize(width, height, resolution);
-      });
-      if (this.depthStencilTexture) {
-        this.depthStencilTexture.source.resize(width, height, resolution);
-      }
-    }
-    destroy() {
-      this.colorTexture.source.off("resize", this.onSourceResize, this);
-      if (this.depthStencilTexture) {
-        this.depthStencilTexture.destroy();
-        delete this.depthStencilTexture;
-      }
-    }
-  };
-  _RenderTarget.defaultOptions = {
-    width: 0,
-    height: 0,
-    resolution: 1,
-    colorTextures: 1,
-    stencil: false,
-    depth: false,
-    antialias: false,
-    // save on perf by default!
-    isRoot: false
-  };
-  let RenderTarget = _RenderTarget;
-
-  "use strict";
-  class RenderTargetSystem {
-    constructor(renderer) {
-      /** This is the root viewport for the render pass*/
-      this.rootViewPort = new Rectangle();
-      /** the current viewport that the gpu is using */
-      this.viewport = new Rectangle();
-      /**
-       * a runner that lets systems know if the active render target has changed.
-       * Eg the Stencil System needs to know so it can manage the stencil buffer
-       */
-      this.onRenderTargetChange = new SystemRunner("onRenderTargetChange");
-      /** the projection matrix that is used by the shaders based on the active render target and the viewport */
-      this.projectionMatrix = new Matrix();
-      /** the default clear color for render targets */
-      this.defaultClearColor = [0, 0, 0, 0];
-      /**
-       * a hash that stores the render target for a given render surface. When you pass in a texture source,
-       * a render target is created for it. This map stores and makes it easy to retrieve the render target
-       */
-      this._renderSurfaceToRenderTargetHash = /* @__PURE__ */ new Map();
-      /** A hash that stores a gpu render target for a given render target. */
-      this._gpuRenderTargetHash = /* @__PURE__ */ Object.create(null);
-      /**
-       * A stack that stores the render target and frame that is currently being rendered to.
-       * When push is called, the current render target is stored in this stack.
-       * When pop is called, the previous render target is restored.
-       */
-      this._renderTargetStack = [];
-      this._renderer = renderer;
-    }
-    /** called when dev wants to finish a render pass */
-    finishRenderPass() {
-      this.adaptor.finishRenderPass(this.renderTarget);
-    }
-    /**
-     * called when the renderer starts to render a scene.
-     * @param options
-     * @param options.target - the render target to render to
-     * @param options.clear - the clear mode to use. Can be true or a CLEAR number 'COLOR | DEPTH | STENCIL' 0b111
-     * @param options.clearColor - the color to clear to
-     * @param options.frame - the frame to render to
-     */
-    renderStart({
-      target,
-      clear,
-      clearColor,
-      frame
-    }) {
-      this._renderTargetStack.length = 0;
-      this.push(
-        target,
-        clear,
-        clearColor,
-        frame
-      );
-      this.rootViewPort.copyFrom(this.viewport);
-      this.rootRenderTarget = this.renderTarget;
-      this.renderingToScreen = isRenderingToScreen(this.rootRenderTarget);
-    }
-    /**
-     * Binding a render surface! This is the main function of the render target system.
-     * It will take the RenderSurface (which can be a texture, canvas, or render target) and bind it to the renderer.
-     * Once bound all draw calls will be rendered to the render surface.
-     *
-     * If a frame is not provide and the render surface is a texture, the frame of the texture will be used.
-     * @param renderSurface - the render surface to bind
-     * @param clear - the clear mode to use. Can be true or a CLEAR number 'COLOR | DEPTH | STENCIL' 0b111
-     * @param clearColor - the color to clear to
-     * @param frame - the frame to render to
-     * @returns the render target that was bound
-     */
-    bind(renderSurface, clear = true, clearColor, frame) {
-      const renderTarget = this.getRenderTarget(renderSurface);
-      const didChange = this.renderTarget !== renderTarget;
-      this.renderTarget = renderTarget;
-      this.renderSurface = renderSurface;
-      const gpuRenderTarget = this.getGpuRenderTarget(renderTarget);
-      if (renderTarget.pixelWidth !== gpuRenderTarget.width || renderTarget.pixelHeight !== gpuRenderTarget.height) {
-        this.adaptor.resizeGpuRenderTarget(renderTarget);
-        gpuRenderTarget.width = renderTarget.pixelWidth;
-        gpuRenderTarget.height = renderTarget.pixelHeight;
-      }
-      const source = renderTarget.colorTexture;
-      const viewport = this.viewport;
-      const pixelWidth = source.pixelWidth;
-      const pixelHeight = source.pixelHeight;
-      if (!frame && renderSurface instanceof Texture) {
-        frame = renderSurface.frame;
-      }
-      if (frame) {
-        const resolution = source._resolution;
-        viewport.x = frame.x * resolution + 0.5 | 0;
-        viewport.y = frame.y * resolution + 0.5 | 0;
-        viewport.width = frame.width * resolution + 0.5 | 0;
-        viewport.height = frame.height * resolution + 0.5 | 0;
-      } else {
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.width = pixelWidth;
-        viewport.height = pixelHeight;
-      }
-      calculateProjection(
-        this.projectionMatrix,
-        0,
-        0,
-        viewport.width / source.resolution,
-        viewport.height / source.resolution,
-        !renderTarget.isRoot
-      );
-      this.adaptor.startRenderPass(renderTarget, clear, clearColor, viewport);
-      if (didChange) {
-        this.onRenderTargetChange.emit(renderTarget);
-      }
-      return renderTarget;
-    }
-    clear(target, clear = CLEAR.ALL, clearColor) {
-      if (!clear)
-        return;
-      if (target) {
-        target = this.getRenderTarget(target);
-      }
-      this.adaptor.clear(
-        target || this.renderTarget,
-        clear,
-        clearColor,
-        this.viewport
-      );
-    }
-    contextChange() {
-      this._gpuRenderTargetHash = /* @__PURE__ */ Object.create(null);
-    }
-    /**
-     * Push a render surface to the renderer. This will bind the render surface to the renderer,
-     * @param renderSurface - the render surface to push
-     * @param clear - the clear mode to use. Can be true or a CLEAR number 'COLOR | DEPTH | STENCIL' 0b111
-     * @param clearColor - the color to clear to
-     * @param frame - the frame to use when rendering to the render surface
-     */
-    push(renderSurface, clear = CLEAR.ALL, clearColor, frame) {
-      const renderTarget = this.bind(renderSurface, clear, clearColor, frame);
-      this._renderTargetStack.push({
-        renderTarget,
-        frame
-      });
-      return renderTarget;
-    }
-    /** Pops the current render target from the renderer and restores the previous render target. */
-    pop() {
-      this._renderTargetStack.pop();
-      const currentRenderTargetData = this._renderTargetStack[this._renderTargetStack.length - 1];
-      this.bind(currentRenderTargetData.renderTarget, false, null, currentRenderTargetData.frame);
-    }
-    /**
-     * Gets the render target from the provide render surface. Eg if its a texture,
-     * it will return the render target for the texture.
-     * If its a render target, it will return the same render target.
-     * @param renderSurface - the render surface to get the render target for
-     * @returns the render target for the render surface
-     */
-    getRenderTarget(renderSurface) {
-      var _a;
-      if (renderSurface.isTexture) {
-        renderSurface = renderSurface.source;
-      }
-      return (_a = this._renderSurfaceToRenderTargetHash.get(renderSurface)) != null ? _a : this._initRenderTarget(renderSurface);
-    }
-    /**
-     * Copies a render surface to another texture
-     * @param sourceRenderSurfaceTexture - the render surface to copy from
-     * @param destinationTexture - the texture to copy to
-     * @param origin - the origin of the copy
-     * @param origin.x - the x origin of the copy
-     * @param origin.y - the y origin of the copy
-     * @param size - the size of the copy
-     * @param size.width - the width of the copy
-     * @param size.height - the height of the copy
-     */
-    copyToTexture(sourceRenderSurfaceTexture, destinationTexture, origin, size) {
-      return this.adaptor.copyToTexture(
-        sourceRenderSurfaceTexture,
-        destinationTexture,
-        origin,
-        size
-      );
-    }
-    /**
-     * ensures that we have a depth stencil buffer available to render to
-     * This is used by the mask system to make sure we have a stencil buffer.
-     */
-    ensureDepthStencil() {
-      if (!this.renderTarget.stencil) {
-        this.renderTarget.stencil = true;
-        this.adaptor.startRenderPass(this.renderTarget, false, null, this.viewport);
-      }
-    }
-    /** nukes the render target system */
-    destroy() {
-      this._renderer = null;
-      this._renderSurfaceToRenderTargetHash.forEach((renderTarget, key) => {
-        if (renderTarget !== key) {
-          renderTarget.destroy();
-        }
-      });
-      this._renderSurfaceToRenderTargetHash.clear();
-      this._gpuRenderTargetHash = /* @__PURE__ */ Object.create(null);
-    }
-    _initRenderTarget(renderSurface) {
-      let renderTarget = null;
-      if (CanvasSource.test(renderSurface)) {
-        renderSurface = getCanvasTexture(renderSurface);
-      }
-      if (renderSurface instanceof RenderTarget) {
-        renderTarget = renderSurface;
-      } else if (renderSurface instanceof TextureSource) {
-        renderTarget = new RenderTarget({
-          colorTextures: [renderSurface]
-        });
-        if (CanvasSource.test(renderSurface.source.resource)) {
-          renderTarget.isRoot = true;
-        }
-        renderSurface.on("destroy", () => {
-          renderTarget.destroy();
-        });
-      }
-      this._renderSurfaceToRenderTargetHash.set(renderSurface, renderTarget);
-      return renderTarget;
-    }
-    getGpuRenderTarget(renderTarget) {
-      return this._gpuRenderTargetHash[renderTarget.uid] || (this._gpuRenderTargetHash[renderTarget.uid] = this.adaptor.initGpuRenderTarget(renderTarget));
-    }
-  }
-
-  "use strict";
-  class GlRenderTargetSystem extends RenderTargetSystem {
-    constructor(renderer) {
-      super(renderer);
-      this.adaptor = new GlRenderTargetAdaptor();
-      this.adaptor.init(renderer, this);
-    }
-  }
-  /** @ignore */
-  GlRenderTargetSystem.extension = {
-    type: [ExtensionType.WebGLSystem],
-    name: "renderTarget"
-  };
-
-  "use strict";
   const GpuStencilModesToPixi = [];
   GpuStencilModesToPixi[STENCIL_MODES.NONE] = void 0;
   GpuStencilModesToPixi[STENCIL_MODES.DISABLED] = {
@@ -33291,21 +34316,21 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   }
 
   "use strict";
-  var __defProp$f = Object.defineProperty;
+  var __defProp$h = Object.defineProperty;
   var __defProps$7 = Object.defineProperties;
   var __getOwnPropDescs$7 = Object.getOwnPropertyDescriptors;
-  var __getOwnPropSymbols$f = Object.getOwnPropertySymbols;
-  var __hasOwnProp$f = Object.prototype.hasOwnProperty;
-  var __propIsEnum$f = Object.prototype.propertyIsEnumerable;
-  var __defNormalProp$f = (obj, key, value) => key in obj ? __defProp$f(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-  var __spreadValues$f = (a, b) => {
+  var __getOwnPropSymbols$h = Object.getOwnPropertySymbols;
+  var __hasOwnProp$h = Object.prototype.hasOwnProperty;
+  var __propIsEnum$h = Object.prototype.propertyIsEnumerable;
+  var __defNormalProp$h = (obj, key, value) => key in obj ? __defProp$h(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __spreadValues$h = (a, b) => {
     for (var prop in b || (b = {}))
-      if (__hasOwnProp$f.call(b, prop))
-        __defNormalProp$f(a, prop, b[prop]);
-    if (__getOwnPropSymbols$f)
-      for (var prop of __getOwnPropSymbols$f(b)) {
-        if (__propIsEnum$f.call(b, prop))
-          __defNormalProp$f(a, prop, b[prop]);
+      if (__hasOwnProp$h.call(b, prop))
+        __defNormalProp$h(a, prop, b[prop]);
+    if (__getOwnPropSymbols$h)
+      for (var prop of __getOwnPropSymbols$h(b)) {
+        if (__propIsEnum$h.call(b, prop))
+          __defNormalProp$h(a, prop, b[prop]);
       }
     return a;
   };
@@ -33361,7 +34386,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     "mat2x4<f32>": loopMatrix(2, 4),
     "mat3x4<f32>": loopMatrix(3, 4)
   };
-  const uboSyncFunctionsWGSL = __spreadProps$7(__spreadValues$f({}, uboSyncFunctionsSTD40), {
+  const uboSyncFunctionsWGSL = __spreadProps$7(__spreadValues$h({}, uboSyncFunctionsSTD40), {
     "mat2x2<f32>": `
       data[offset] = v[0];
       data[offset + 1] = v[1];
@@ -33417,6 +34442,732 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   GlUboSystem.extension = {
     type: [ExtensionType.WebGLSystem],
     name: "ubo"
+  };
+
+  "use strict";
+  class GlRenderTargetAdaptor {
+    constructor() {
+      this._clearColorCache = [0, 0, 0, 0];
+      this._viewPortCache = new Rectangle();
+    }
+    init(renderer, renderTargetSystem) {
+      this._renderer = renderer;
+      this._renderTargetSystem = renderTargetSystem;
+      renderer.runners.contextChange.add(this);
+    }
+    contextChange() {
+      this._clearColorCache = [0, 0, 0, 0];
+      this._viewPortCache = new Rectangle();
+    }
+    copyToTexture(sourceRenderSurfaceTexture, destinationTexture, originSrc, size, originDest) {
+      const renderTargetSystem = this._renderTargetSystem;
+      const renderer = this._renderer;
+      const glRenderTarget = renderTargetSystem.getGpuRenderTarget(sourceRenderSurfaceTexture);
+      const gl = renderer.gl;
+      this.finishRenderPass(sourceRenderSurfaceTexture);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, glRenderTarget.resolveTargetFramebuffer);
+      renderer.texture.bind(destinationTexture, 0);
+      gl.copyTexSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        originDest.x,
+        originDest.y,
+        originSrc.x,
+        originSrc.y,
+        size.width,
+        size.height
+      );
+      return destinationTexture;
+    }
+    startRenderPass(renderTarget, clear = true, clearColor, viewport) {
+      const renderTargetSystem = this._renderTargetSystem;
+      const source = renderTarget.colorTexture;
+      const gpuRenderTarget = renderTargetSystem.getGpuRenderTarget(renderTarget);
+      let viewPortY = viewport.y;
+      if (renderTarget.isRoot) {
+        viewPortY = source.pixelHeight - viewport.height;
+      }
+      renderTarget.colorTextures.forEach((texture) => {
+        this._renderer.texture.unbind(texture);
+      });
+      const gl = this._renderer.gl;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, gpuRenderTarget.framebuffer);
+      const viewPortCache = this._viewPortCache;
+      if (viewPortCache.x !== viewport.x || viewPortCache.y !== viewPortY || viewPortCache.width !== viewport.width || viewPortCache.height !== viewport.height) {
+        viewPortCache.x = viewport.x;
+        viewPortCache.y = viewPortY;
+        viewPortCache.width = viewport.width;
+        viewPortCache.height = viewport.height;
+        gl.viewport(
+          viewport.x,
+          viewPortY,
+          viewport.width,
+          viewport.height
+        );
+      }
+      if (!gpuRenderTarget.depthStencilRenderBuffer && (renderTarget.stencil || renderTarget.depth)) {
+        this._initStencil(gpuRenderTarget);
+      }
+      this.clear(renderTarget, clear, clearColor);
+    }
+    finishRenderPass(renderTarget) {
+      const renderTargetSystem = this._renderTargetSystem;
+      const glRenderTarget = renderTargetSystem.getGpuRenderTarget(renderTarget);
+      if (!glRenderTarget.msaa)
+        return;
+      const gl = this._renderer.gl;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, glRenderTarget.resolveTargetFramebuffer);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, glRenderTarget.framebuffer);
+      gl.blitFramebuffer(
+        0,
+        0,
+        glRenderTarget.width,
+        glRenderTarget.height,
+        0,
+        0,
+        glRenderTarget.width,
+        glRenderTarget.height,
+        gl.COLOR_BUFFER_BIT,
+        gl.NEAREST
+      );
+      gl.bindFramebuffer(gl.FRAMEBUFFER, glRenderTarget.framebuffer);
+    }
+    initGpuRenderTarget(renderTarget) {
+      const renderer = this._renderer;
+      const gl = renderer.gl;
+      const glRenderTarget = new GlRenderTarget();
+      if (CanvasSource.test(renderTarget.colorTexture.resource)) {
+        glRenderTarget.framebuffer = null;
+        return glRenderTarget;
+      }
+      this._initColor(renderTarget, glRenderTarget);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      return glRenderTarget;
+    }
+    clear(_renderTarget, clear, clearColor) {
+      if (!clear)
+        return;
+      const renderTargetSystem = this._renderTargetSystem;
+      if (typeof clear === "boolean") {
+        clear = clear ? CLEAR.ALL : CLEAR.NONE;
+      }
+      const gl = this._renderer.gl;
+      if (clear & CLEAR.COLOR) {
+        clearColor != null ? clearColor : clearColor = renderTargetSystem.defaultClearColor;
+        const clearColorCache = this._clearColorCache;
+        const clearColorArray = clearColor;
+        if (clearColorCache[0] !== clearColorArray[0] || clearColorCache[1] !== clearColorArray[1] || clearColorCache[2] !== clearColorArray[2] || clearColorCache[3] !== clearColorArray[3]) {
+          clearColorCache[0] = clearColorArray[0];
+          clearColorCache[1] = clearColorArray[1];
+          clearColorCache[2] = clearColorArray[2];
+          clearColorCache[3] = clearColorArray[3];
+          gl.clearColor(clearColorArray[0], clearColorArray[1], clearColorArray[2], clearColorArray[3]);
+        }
+      }
+      gl.clear(clear);
+    }
+    resizeGpuRenderTarget(renderTarget) {
+      if (renderTarget.isRoot)
+        return;
+      const renderTargetSystem = this._renderTargetSystem;
+      const glRenderTarget = renderTargetSystem.getGpuRenderTarget(renderTarget);
+      this._resizeColor(renderTarget, glRenderTarget);
+      if (renderTarget.stencil) {
+        this._resizeStencil(glRenderTarget);
+      }
+    }
+    _initColor(renderTarget, glRenderTarget) {
+      const renderer = this._renderer;
+      const gl = renderer.gl;
+      const resolveTargetFramebuffer = gl.createFramebuffer();
+      glRenderTarget.resolveTargetFramebuffer = resolveTargetFramebuffer;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, resolveTargetFramebuffer);
+      glRenderTarget.width = renderTarget.colorTexture.source.pixelWidth;
+      glRenderTarget.height = renderTarget.colorTexture.source.pixelHeight;
+      renderTarget.colorTextures.forEach((colorTexture, i) => {
+        const source = colorTexture.source;
+        if (source.antialias) {
+          if (renderer.context.supports.msaa) {
+            glRenderTarget.msaa = true;
+          } else {
+            warn("[RenderTexture] Antialiasing on textures is not supported in WebGL1");
+          }
+        }
+        renderer.texture.bindSource(source, 0);
+        const glSource = renderer.texture.getGlSource(source);
+        const glTexture = glSource.texture;
+        gl.framebufferTexture2D(
+          gl.FRAMEBUFFER,
+          gl.COLOR_ATTACHMENT0 + i,
+          3553,
+          // texture.target,
+          glTexture,
+          0
+        );
+      });
+      if (glRenderTarget.msaa) {
+        const viewFramebuffer = gl.createFramebuffer();
+        glRenderTarget.framebuffer = viewFramebuffer;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, viewFramebuffer);
+        renderTarget.colorTextures.forEach((_, i) => {
+          const msaaRenderBuffer = gl.createRenderbuffer();
+          glRenderTarget.msaaRenderBuffer[i] = msaaRenderBuffer;
+        });
+      } else {
+        glRenderTarget.framebuffer = resolveTargetFramebuffer;
+      }
+      this._resizeColor(renderTarget, glRenderTarget);
+    }
+    _resizeColor(renderTarget, glRenderTarget) {
+      const source = renderTarget.colorTexture.source;
+      glRenderTarget.width = source.pixelWidth;
+      glRenderTarget.height = source.pixelHeight;
+      renderTarget.colorTextures.forEach((colorTexture, i) => {
+        if (i === 0)
+          return;
+        colorTexture.source.resize(source.width, source.height, source._resolution);
+      });
+      if (glRenderTarget.msaa) {
+        const renderer = this._renderer;
+        const gl = renderer.gl;
+        const viewFramebuffer = glRenderTarget.framebuffer;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, viewFramebuffer);
+        renderTarget.colorTextures.forEach((colorTexture, i) => {
+          const source2 = colorTexture.source;
+          renderer.texture.bindSource(source2, 0);
+          const glSource = renderer.texture.getGlSource(source2);
+          const glInternalFormat = glSource.internalFormat;
+          const msaaRenderBuffer = glRenderTarget.msaaRenderBuffer[i];
+          gl.bindRenderbuffer(
+            gl.RENDERBUFFER,
+            msaaRenderBuffer
+          );
+          gl.renderbufferStorageMultisample(
+            gl.RENDERBUFFER,
+            4,
+            glInternalFormat,
+            source2.pixelWidth,
+            source2.pixelHeight
+          );
+          gl.framebufferRenderbuffer(
+            gl.FRAMEBUFFER,
+            gl.COLOR_ATTACHMENT0 + i,
+            gl.RENDERBUFFER,
+            msaaRenderBuffer
+          );
+        });
+      }
+    }
+    _initStencil(glRenderTarget) {
+      if (glRenderTarget.framebuffer === null)
+        return;
+      const gl = this._renderer.gl;
+      const depthStencilRenderBuffer = gl.createRenderbuffer();
+      glRenderTarget.depthStencilRenderBuffer = depthStencilRenderBuffer;
+      gl.bindRenderbuffer(
+        gl.RENDERBUFFER,
+        depthStencilRenderBuffer
+      );
+      gl.framebufferRenderbuffer(
+        gl.FRAMEBUFFER,
+        gl.DEPTH_STENCIL_ATTACHMENT,
+        gl.RENDERBUFFER,
+        depthStencilRenderBuffer
+      );
+      this._resizeStencil(glRenderTarget);
+    }
+    _resizeStencil(glRenderTarget) {
+      const gl = this._renderer.gl;
+      gl.bindRenderbuffer(
+        gl.RENDERBUFFER,
+        glRenderTarget.depthStencilRenderBuffer
+      );
+      if (glRenderTarget.msaa) {
+        gl.renderbufferStorageMultisample(
+          gl.RENDERBUFFER,
+          4,
+          gl.DEPTH24_STENCIL8,
+          glRenderTarget.width,
+          glRenderTarget.height
+        );
+      } else {
+        gl.renderbufferStorage(
+          gl.RENDERBUFFER,
+          this._renderer.context.webGLVersion === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL,
+          glRenderTarget.width,
+          glRenderTarget.height
+        );
+      }
+    }
+  }
+
+  "use strict";
+  function calculateProjection(pm, x, y, width, height, flipY) {
+    const sign = flipY ? 1 : -1;
+    pm.identity();
+    pm.a = 1 / width * 2;
+    pm.d = sign * (1 / height * 2);
+    pm.tx = -1 - x * pm.a;
+    pm.ty = -sign - y * pm.d;
+    return pm;
+  }
+
+  "use strict";
+  var __defProp$g = Object.defineProperty;
+  var __getOwnPropSymbols$g = Object.getOwnPropertySymbols;
+  var __hasOwnProp$g = Object.prototype.hasOwnProperty;
+  var __propIsEnum$g = Object.prototype.propertyIsEnumerable;
+  var __defNormalProp$g = (obj, key, value) => key in obj ? __defProp$g(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __spreadValues$g = (a, b) => {
+    for (var prop in b || (b = {}))
+      if (__hasOwnProp$g.call(b, prop))
+        __defNormalProp$g(a, prop, b[prop]);
+    if (__getOwnPropSymbols$g)
+      for (var prop of __getOwnPropSymbols$g(b)) {
+        if (__propIsEnum$g.call(b, prop))
+          __defNormalProp$g(a, prop, b[prop]);
+      }
+    return a;
+  };
+  const canvasCache = /* @__PURE__ */ new Map();
+  function getCanvasTexture(canvas, options) {
+    if (!canvasCache.has(canvas)) {
+      const texture = new Texture({
+        source: new CanvasSource(__spreadValues$g({
+          resource: canvas
+        }, options))
+      });
+      const onDestroy = () => {
+        if (canvasCache.get(canvas) === texture) {
+          canvasCache.delete(canvas);
+        }
+      };
+      texture.once("destroy", onDestroy);
+      texture.source.once("destroy", onDestroy);
+      canvasCache.set(canvas, texture);
+    }
+    return canvasCache.get(canvas);
+  }
+  function hasCachedCanvasTexture(canvas) {
+    return canvasCache.has(canvas);
+  }
+
+  "use strict";
+  function isRenderingToScreen(renderTarget) {
+    const resource = renderTarget.colorTexture.source.resource;
+    return globalThis.HTMLCanvasElement && resource instanceof HTMLCanvasElement && document.body.contains(resource);
+  }
+
+  "use strict";
+  var __defProp$f = Object.defineProperty;
+  var __getOwnPropSymbols$f = Object.getOwnPropertySymbols;
+  var __hasOwnProp$f = Object.prototype.hasOwnProperty;
+  var __propIsEnum$f = Object.prototype.propertyIsEnumerable;
+  var __defNormalProp$f = (obj, key, value) => key in obj ? __defProp$f(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __spreadValues$f = (a, b) => {
+    for (var prop in b || (b = {}))
+      if (__hasOwnProp$f.call(b, prop))
+        __defNormalProp$f(a, prop, b[prop]);
+    if (__getOwnPropSymbols$f)
+      for (var prop of __getOwnPropSymbols$f(b)) {
+        if (__propIsEnum$f.call(b, prop))
+          __defNormalProp$f(a, prop, b[prop]);
+      }
+    return a;
+  };
+  const _RenderTarget = class _RenderTarget {
+    /**
+     * @param [descriptor] - Options for creating a render target.
+     */
+    constructor(descriptor = {}) {
+      this.uid = uid("renderTarget");
+      /**
+       * An array of textures that can be written to by the GPU - mostly this has one texture in Pixi, but you could
+       * write to multiple if required! (eg deferred lighting)
+       */
+      this.colorTextures = [];
+      this.dirtyId = 0;
+      this.isRoot = false;
+      this._size = new Float32Array(2);
+      descriptor = __spreadValues$f(__spreadValues$f({}, _RenderTarget.defaultOptions), descriptor);
+      this.stencil = descriptor.stencil;
+      this.depth = descriptor.depth;
+      this.isRoot = descriptor.isRoot;
+      if (typeof descriptor.colorTextures === "number") {
+        for (let i = 0; i < descriptor.colorTextures; i++) {
+          this.colorTextures.push(
+            new TextureSource({
+              width: descriptor.width,
+              height: descriptor.height,
+              resolution: descriptor.resolution,
+              antialias: descriptor.antialias
+            })
+          );
+        }
+      } else {
+        this.colorTextures = [...descriptor.colorTextures.map((texture) => texture.source)];
+        const colorSource = this.colorTexture.source;
+        this.resize(colorSource.width, colorSource.height, colorSource._resolution);
+      }
+      this.colorTexture.source.on("resize", this.onSourceResize, this);
+      if (descriptor.depthStencilTexture || this.stencil) {
+        if (descriptor.depthStencilTexture instanceof Texture || descriptor.depthStencilTexture instanceof TextureSource) {
+          this.depthStencilTexture = descriptor.depthStencilTexture.source;
+        } else {
+          this.ensureDepthStencilTexture();
+        }
+      }
+    }
+    get size() {
+      const _size = this._size;
+      _size[0] = this.pixelWidth;
+      _size[1] = this.pixelHeight;
+      return _size;
+    }
+    get width() {
+      return this.colorTexture.source.width;
+    }
+    get height() {
+      return this.colorTexture.source.height;
+    }
+    get pixelWidth() {
+      return this.colorTexture.source.pixelWidth;
+    }
+    get pixelHeight() {
+      return this.colorTexture.source.pixelHeight;
+    }
+    get resolution() {
+      return this.colorTexture.source._resolution;
+    }
+    get colorTexture() {
+      return this.colorTextures[0];
+    }
+    onSourceResize(source) {
+      this.resize(source.width, source.height, source._resolution, true);
+    }
+    /**
+     * This will ensure a depthStencil texture is created for this render target.
+     * Most likely called by the mask system to make sure we have stencil buffer added.
+     * @internal
+     * @ignore
+     */
+    ensureDepthStencilTexture() {
+      if (!this.depthStencilTexture) {
+        this.depthStencilTexture = new TextureSource({
+          width: this.width,
+          height: this.height,
+          resolution: this.resolution,
+          format: "depth24plus-stencil8",
+          autoGenerateMipmaps: false,
+          antialias: false,
+          mipLevelCount: 1
+          // sampleCount: handled by the render target system..
+        });
+      }
+    }
+    resize(width, height, resolution = this.resolution, skipColorTexture = false) {
+      this.dirtyId++;
+      this.colorTextures.forEach((colorTexture, i) => {
+        if (skipColorTexture && i === 0)
+          return;
+        colorTexture.source.resize(width, height, resolution);
+      });
+      if (this.depthStencilTexture) {
+        this.depthStencilTexture.source.resize(width, height, resolution);
+      }
+    }
+    destroy() {
+      this.colorTexture.source.off("resize", this.onSourceResize, this);
+      if (this.depthStencilTexture) {
+        this.depthStencilTexture.destroy();
+        delete this.depthStencilTexture;
+      }
+    }
+  };
+  /** The default options for a render target */
+  _RenderTarget.defaultOptions = {
+    /** the width of the RenderTarget */
+    width: 0,
+    /** the height of the RenderTarget */
+    height: 0,
+    /** the resolution of the RenderTarget */
+    resolution: 1,
+    /** an array of textures, or a number indicating how many color textures there should be */
+    colorTextures: 1,
+    /** should this render target have a stencil buffer? */
+    stencil: false,
+    /** should this render target have a depth buffer? */
+    depth: false,
+    /** should this render target be antialiased? */
+    antialias: false,
+    // save on perf by default!
+    /** is this a root element, true if this is gl context owners render target */
+    isRoot: false
+  };
+  let RenderTarget = _RenderTarget;
+
+  "use strict";
+  class RenderTargetSystem {
+    constructor(renderer) {
+      /** This is the root viewport for the render pass*/
+      this.rootViewPort = new Rectangle();
+      /** the current viewport that the gpu is using */
+      this.viewport = new Rectangle();
+      /**
+       * a runner that lets systems know if the active render target has changed.
+       * Eg the Stencil System needs to know so it can manage the stencil buffer
+       */
+      this.onRenderTargetChange = new SystemRunner("onRenderTargetChange");
+      /** the projection matrix that is used by the shaders based on the active render target and the viewport */
+      this.projectionMatrix = new Matrix();
+      /** the default clear color for render targets */
+      this.defaultClearColor = [0, 0, 0, 0];
+      /**
+       * a hash that stores the render target for a given render surface. When you pass in a texture source,
+       * a render target is created for it. This map stores and makes it easy to retrieve the render target
+       */
+      this._renderSurfaceToRenderTargetHash = /* @__PURE__ */ new Map();
+      /** A hash that stores a gpu render target for a given render target. */
+      this._gpuRenderTargetHash = /* @__PURE__ */ Object.create(null);
+      /**
+       * A stack that stores the render target and frame that is currently being rendered to.
+       * When push is called, the current render target is stored in this stack.
+       * When pop is called, the previous render target is restored.
+       */
+      this._renderTargetStack = [];
+      this._renderer = renderer;
+    }
+    /** called when dev wants to finish a render pass */
+    finishRenderPass() {
+      this.adaptor.finishRenderPass(this.renderTarget);
+    }
+    /**
+     * called when the renderer starts to render a scene.
+     * @param options
+     * @param options.target - the render target to render to
+     * @param options.clear - the clear mode to use. Can be true or a CLEAR number 'COLOR | DEPTH | STENCIL' 0b111
+     * @param options.clearColor - the color to clear to
+     * @param options.frame - the frame to render to
+     */
+    renderStart({
+      target,
+      clear,
+      clearColor,
+      frame
+    }) {
+      this._renderTargetStack.length = 0;
+      this.push(
+        target,
+        clear,
+        clearColor,
+        frame
+      );
+      this.rootViewPort.copyFrom(this.viewport);
+      this.rootRenderTarget = this.renderTarget;
+      this.renderingToScreen = isRenderingToScreen(this.rootRenderTarget);
+    }
+    /**
+     * Binding a render surface! This is the main function of the render target system.
+     * It will take the RenderSurface (which can be a texture, canvas, or render target) and bind it to the renderer.
+     * Once bound all draw calls will be rendered to the render surface.
+     *
+     * If a frame is not provide and the render surface is a texture, the frame of the texture will be used.
+     * @param renderSurface - the render surface to bind
+     * @param clear - the clear mode to use. Can be true or a CLEAR number 'COLOR | DEPTH | STENCIL' 0b111
+     * @param clearColor - the color to clear to
+     * @param frame - the frame to render to
+     * @returns the render target that was bound
+     */
+    bind(renderSurface, clear = true, clearColor, frame) {
+      const renderTarget = this.getRenderTarget(renderSurface);
+      const didChange = this.renderTarget !== renderTarget;
+      this.renderTarget = renderTarget;
+      this.renderSurface = renderSurface;
+      const gpuRenderTarget = this.getGpuRenderTarget(renderTarget);
+      if (renderTarget.pixelWidth !== gpuRenderTarget.width || renderTarget.pixelHeight !== gpuRenderTarget.height) {
+        this.adaptor.resizeGpuRenderTarget(renderTarget);
+        gpuRenderTarget.width = renderTarget.pixelWidth;
+        gpuRenderTarget.height = renderTarget.pixelHeight;
+      }
+      const source = renderTarget.colorTexture;
+      const viewport = this.viewport;
+      const pixelWidth = source.pixelWidth;
+      const pixelHeight = source.pixelHeight;
+      if (!frame && renderSurface instanceof Texture) {
+        frame = renderSurface.frame;
+      }
+      if (frame) {
+        const resolution = source._resolution;
+        viewport.x = frame.x * resolution + 0.5 | 0;
+        viewport.y = frame.y * resolution + 0.5 | 0;
+        viewport.width = frame.width * resolution + 0.5 | 0;
+        viewport.height = frame.height * resolution + 0.5 | 0;
+      } else {
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = pixelWidth;
+        viewport.height = pixelHeight;
+      }
+      calculateProjection(
+        this.projectionMatrix,
+        0,
+        0,
+        viewport.width / source.resolution,
+        viewport.height / source.resolution,
+        !renderTarget.isRoot
+      );
+      this.adaptor.startRenderPass(renderTarget, clear, clearColor, viewport);
+      if (didChange) {
+        this.onRenderTargetChange.emit(renderTarget);
+      }
+      return renderTarget;
+    }
+    clear(target, clear = CLEAR.ALL, clearColor) {
+      if (!clear)
+        return;
+      if (target) {
+        target = this.getRenderTarget(target);
+      }
+      this.adaptor.clear(
+        target || this.renderTarget,
+        clear,
+        clearColor,
+        this.viewport
+      );
+    }
+    contextChange() {
+      this._gpuRenderTargetHash = /* @__PURE__ */ Object.create(null);
+    }
+    /**
+     * Push a render surface to the renderer. This will bind the render surface to the renderer,
+     * @param renderSurface - the render surface to push
+     * @param clear - the clear mode to use. Can be true or a CLEAR number 'COLOR | DEPTH | STENCIL' 0b111
+     * @param clearColor - the color to clear to
+     * @param frame - the frame to use when rendering to the render surface
+     */
+    push(renderSurface, clear = CLEAR.ALL, clearColor, frame) {
+      const renderTarget = this.bind(renderSurface, clear, clearColor, frame);
+      this._renderTargetStack.push({
+        renderTarget,
+        frame
+      });
+      return renderTarget;
+    }
+    /** Pops the current render target from the renderer and restores the previous render target. */
+    pop() {
+      this._renderTargetStack.pop();
+      const currentRenderTargetData = this._renderTargetStack[this._renderTargetStack.length - 1];
+      this.bind(currentRenderTargetData.renderTarget, false, null, currentRenderTargetData.frame);
+    }
+    /**
+     * Gets the render target from the provide render surface. Eg if its a texture,
+     * it will return the render target for the texture.
+     * If its a render target, it will return the same render target.
+     * @param renderSurface - the render surface to get the render target for
+     * @returns the render target for the render surface
+     */
+    getRenderTarget(renderSurface) {
+      var _a;
+      if (renderSurface.isTexture) {
+        renderSurface = renderSurface.source;
+      }
+      return (_a = this._renderSurfaceToRenderTargetHash.get(renderSurface)) != null ? _a : this._initRenderTarget(renderSurface);
+    }
+    /**
+     * Copies a render surface to another texture
+     * @param sourceRenderSurfaceTexture - the render surface to copy from
+     * @param destinationTexture - the texture to copy to
+     * @param originSrc - the origin of the copy
+     * @param originSrc.x - the x origin of the copy
+     * @param originSrc.y - the y origin of the copy
+     * @param size - the size of the copy
+     * @param size.width - the width of the copy
+     * @param size.height - the height of the copy
+     * @param originDest - the destination origin (top left to paste from!)
+     * @param originDest.x - the x origin of the paste
+     * @param originDest.y - the y origin of the paste
+     */
+    copyToTexture(sourceRenderSurfaceTexture, destinationTexture, originSrc, size, originDest) {
+      if (originSrc.x < 0) {
+        size.width += originSrc.x;
+        originDest.x -= originSrc.x;
+        originSrc.x = 0;
+      }
+      if (originSrc.y < 0) {
+        size.height += originSrc.y;
+        originDest.y -= originSrc.y;
+        originSrc.y = 0;
+      }
+      const { pixelWidth, pixelHeight } = sourceRenderSurfaceTexture;
+      size.width = Math.min(size.width, pixelWidth - originSrc.x);
+      size.height = Math.min(size.height, pixelHeight - originSrc.y);
+      return this.adaptor.copyToTexture(
+        sourceRenderSurfaceTexture,
+        destinationTexture,
+        originSrc,
+        size,
+        originDest
+      );
+    }
+    /**
+     * ensures that we have a depth stencil buffer available to render to
+     * This is used by the mask system to make sure we have a stencil buffer.
+     */
+    ensureDepthStencil() {
+      if (!this.renderTarget.stencil) {
+        this.renderTarget.stencil = true;
+        this.adaptor.startRenderPass(this.renderTarget, false, null, this.viewport);
+      }
+    }
+    /** nukes the render target system */
+    destroy() {
+      this._renderer = null;
+      this._renderSurfaceToRenderTargetHash.forEach((renderTarget, key) => {
+        if (renderTarget !== key) {
+          renderTarget.destroy();
+        }
+      });
+      this._renderSurfaceToRenderTargetHash.clear();
+      this._gpuRenderTargetHash = /* @__PURE__ */ Object.create(null);
+    }
+    _initRenderTarget(renderSurface) {
+      let renderTarget = null;
+      if (CanvasSource.test(renderSurface)) {
+        renderSurface = getCanvasTexture(renderSurface);
+      }
+      if (renderSurface instanceof RenderTarget) {
+        renderTarget = renderSurface;
+      } else if (renderSurface instanceof TextureSource) {
+        renderTarget = new RenderTarget({
+          colorTextures: [renderSurface]
+        });
+        if (CanvasSource.test(renderSurface.source.resource)) {
+          renderTarget.isRoot = true;
+        }
+        renderSurface.on("destroy", () => {
+          renderTarget.destroy();
+        });
+      }
+      this._renderSurfaceToRenderTargetHash.set(renderSurface, renderTarget);
+      return renderTarget;
+    }
+    getGpuRenderTarget(renderTarget) {
+      return this._gpuRenderTargetHash[renderTarget.uid] || (this._gpuRenderTargetHash[renderTarget.uid] = this.adaptor.initGpuRenderTarget(renderTarget));
+    }
+  }
+
+  "use strict";
+  class GlRenderTargetSystem extends RenderTargetSystem {
+    constructor(renderer) {
+      super(renderer);
+      this.adaptor = new GlRenderTargetAdaptor();
+      this.adaptor.init(renderer, this);
+    }
+  }
+  /** @ignore */
+  GlRenderTargetSystem.extension = {
+    type: [ExtensionType.WebGLSystem],
+    name: "renderTarget"
   };
 
   "use strict";
@@ -33929,6 +35680,12 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._boundIndexToUniformsHash = /* @__PURE__ */ Object.create(null);
       this._activeProgram = null;
     }
+    /**
+     * Changes the current shader to the one given in parameter.
+     * @param shader - the new shader
+     * @param skipSync - false if the shader should automatically sync its uniforms.
+     * @returns the glProgram that belongs to the shader.
+     */
     bind(shader, skipSync) {
       this._setProgram(shader.glProgram);
       if (skipSync)
@@ -33941,9 +35698,19 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       syncFunction(this._renderer, shader, defaultSyncData);
     }
+    /**
+     * Updates the uniform group.
+     * @param uniformGroup - the uniform group to update
+     */
     updateUniformGroup(uniformGroup) {
       this._renderer.uniformGroup.updateUniformGroup(uniformGroup, this._activeProgram, defaultSyncData);
     }
+    /**
+     * Binds a uniform block to the shader.
+     * @param uniformGroup - the uniform group to bind
+     * @param name - the name of the uniform block
+     * @param index - the index of the uniform block
+     */
     bindUniformBlock(uniformGroup, name, index = 0) {
       const bufferSystem = this._renderer.buffer;
       const programData = this._getProgramData(this._activeProgram);
@@ -34009,6 +35776,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
      * @param shader - the shader to generate the sync function for
      * @param shaderSystem - the shader system to use
      * @returns - the generated sync function
+     * @ignore
      */
     _generateShaderSync(shader, shaderSystem) {
       return generateShaderSyncCode(shader, shaderSystem);
@@ -34576,12 +36344,62 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
 
   "use strict";
   const compressedFormatMap = {
+    "bc1-rgba-unorm": true,
+    "bc1-rgba-unorm-srgb": true,
     "bc2-rgba-unorm": true,
+    "bc2-rgba-unorm-srgb": true,
     "bc3-rgba-unorm": true,
+    "bc3-rgba-unorm-srgb": true,
+    "bc4-r-unorm": true,
+    "bc4-r-snorm": true,
+    "bc5-rg-unorm": true,
+    "bc5-rg-snorm": true,
+    "bc6h-rgb-ufloat": true,
+    "bc6h-rgb-float": true,
     "bc7-rgba-unorm": true,
+    "bc7-rgba-unorm-srgb": true,
+    // ETC2 compressed formats usable if "texture-compression-etc2" is both
+    // supported by the device/user agent and enabled in requestDevice.
+    "etc2-rgb8unorm": true,
+    "etc2-rgb8unorm-srgb": true,
+    "etc2-rgb8a1unorm": true,
+    "etc2-rgb8a1unorm-srgb": true,
     "etc2-rgba8unorm": true,
-    "astc-4x4-unorm": true
-    // TODO fill out the rest..
+    "etc2-rgba8unorm-srgb": true,
+    "eac-r11unorm": true,
+    "eac-r11snorm": true,
+    "eac-rg11unorm": true,
+    "eac-rg11snorm": true,
+    // ASTC compressed formats usable if "texture-compression-astc" is both
+    // supported by the device/user agent and enabled in requestDevice.
+    "astc-4x4-unorm": true,
+    "astc-4x4-unorm-srgb": true,
+    "astc-5x4-unorm": true,
+    "astc-5x4-unorm-srgb": true,
+    "astc-5x5-unorm": true,
+    "astc-5x5-unorm-srgb": true,
+    "astc-6x5-unorm": true,
+    "astc-6x5-unorm-srgb": true,
+    "astc-6x6-unorm": true,
+    "astc-6x6-unorm-srgb": true,
+    "astc-8x5-unorm": true,
+    "astc-8x5-unorm-srgb": true,
+    "astc-8x6-unorm": true,
+    "astc-8x6-unorm-srgb": true,
+    "astc-8x8-unorm": true,
+    "astc-8x8-unorm-srgb": true,
+    "astc-10x5-unorm": true,
+    "astc-10x5-unorm-srgb": true,
+    "astc-10x6-unorm": true,
+    "astc-10x6-unorm-srgb": true,
+    "astc-10x8-unorm": true,
+    "astc-10x8-unorm-srgb": true,
+    "astc-10x10-unorm": true,
+    "astc-10x10-unorm-srgb": true,
+    "astc-12x10-unorm": true,
+    "astc-12x10-unorm-srgb": true,
+    "astc-12x12-unorm": true,
+    "astc-12x12-unorm-srgb": true
   };
   const glUploadCompressedTextureResource = {
     id: "compressed",
@@ -34862,20 +36680,21 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   };
   var __spreadProps$6 = (a, b) => __defProps$6(a, __getOwnPropDescs$6(b));
   function mapFormatToGlInternalFormat(gl, extensions) {
-    var _a;
     let srgb = {};
+    let bgra8unorm = gl.RGBA;
     if (gl instanceof WebGL2RenderingContext) {
       srgb = {
         "rgba8unorm-srgb": gl.SRGB8_ALPHA8,
         "bgra8unorm-srgb": gl.SRGB8_ALPHA8
       };
+      bgra8unorm = gl.RGBA8;
     } else if (extensions.srgb) {
       srgb = {
         "rgba8unorm-srgb": extensions.srgb.SRGB8_ALPHA8_EXT,
         "bgra8unorm-srgb": extensions.srgb.SRGB8_ALPHA8_EXT
       };
     }
-    return __spreadValues$e(__spreadValues$e(__spreadValues$e(__spreadValues$e(__spreadValues$e(__spreadProps$6(__spreadValues$e({
+    return __spreadValues$e(__spreadValues$e(__spreadValues$e(__spreadValues$e(__spreadValues$e(__spreadValues$e(__spreadProps$6(__spreadValues$e({
       // 8-bit formats
       r8unorm: gl.R8,
       r8snorm: gl.R8_SNORM,
@@ -34902,7 +36721,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       rgba8snorm: gl.RGBA8_SNORM,
       rgba8uint: gl.RGBA8UI,
       rgba8sint: gl.RGBA8I,
-      bgra8unorm: (_a = gl.RGBA8) != null ? _a : gl.RGBA,
+      bgra8unorm,
       rgb9e5ufloat: gl.RGB9_E5,
       rgb10a2unorm: gl.RGB10_A2,
       rg11b10ufloat: gl.R11F_G11F_B10F,
@@ -34925,12 +36744,21 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       depth32float: gl.DEPTH_COMPONENT32F,
       "depth32float-stencil8": gl.DEPTH32F_STENCIL8
     }), extensions.s3tc ? {
+      "bc1-rgba-unorm": extensions.s3tc.COMPRESSED_RGBA_S3TC_DXT1_EXT,
       "bc2-rgba-unorm": extensions.s3tc.COMPRESSED_RGBA_S3TC_DXT3_EXT,
       "bc3-rgba-unorm": extensions.s3tc.COMPRESSED_RGBA_S3TC_DXT5_EXT
     } : {}), extensions.s3tc_sRGB ? {
+      "bc1-rgba-unorm-srgb": extensions.s3tc_sRGB.COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
       "bc2-rgba-unorm-srgb": extensions.s3tc_sRGB.COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,
       "bc3-rgba-unorm-srgb": extensions.s3tc_sRGB.COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT
+    } : {}), extensions.rgtc ? {
+      "bc4-r-unorm": extensions.rgtc.COMPRESSED_RED_RGTC1_EXT,
+      "bc4-r-snorm": extensions.rgtc.COMPRESSED_SIGNED_RED_RGTC1_EXT,
+      "bc5-rg-unorm": extensions.rgtc.COMPRESSED_RED_GREEN_RGTC2_EXT,
+      "bc5-rg-snorm": extensions.rgtc.COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT
     } : {}), extensions.bptc ? {
+      "bc6h-rgb-float": extensions.bptc.COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT,
+      "bc6h-rgb-ufloat": extensions.bptc.COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT,
       "bc7-rgba-unorm": extensions.bptc.COMPRESSED_RGBA_BPTC_UNORM_EXT,
       "bc7-rgba-unorm-srgb": extensions.bptc.COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT
     } : {}), extensions.etc ? {
@@ -34947,6 +36775,8 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     } : {}), extensions.astc ? {
       "astc-4x4-unorm": extensions.astc.COMPRESSED_RGBA_ASTC_4x4_KHR,
       "astc-4x4-unorm-srgb": extensions.astc.COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR,
+      "astc-5x4-unorm": extensions.astc.COMPRESSED_RGBA_ASTC_5x4_KHR,
+      "astc-5x4-unorm-srgb": extensions.astc.COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR,
       "astc-5x5-unorm": extensions.astc.COMPRESSED_RGBA_ASTC_5x5_KHR,
       "astc-5x5-unorm-srgb": extensions.astc.COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR,
       "astc-6x5-unorm": extensions.astc.COMPRESSED_RGBA_ASTC_6x5_KHR,
@@ -35909,6 +37739,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     /**
      * called when the instruction build process is starting this will reset internally to the default blend mode
      * @internal
+     * @ignore
      */
     buildStart() {
       this._isAdvanced = false;
@@ -35918,6 +37749,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
      * active, we add the final render instructions added to the instruction set
      * @param instructionSet - The instruction set we are adding to
      * @internal
+     * @ignore
      */
     buildEnd(instructionSet) {
       if (this._isAdvanced) {
@@ -35977,11 +37809,21 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       return __spreadValues$c(__spreadValues$c({}, defaults), options);
     }
+    /**
+     * Will return a HTML Image of the target
+     * @param options - The options for creating the image, or the target to extract
+     * @returns - HTML Image of the target
+     */
     async image(options) {
       const image = new Image();
       image.src = await this.base64(options);
       return image;
     }
+    /**
+     * Will return a base64 encoded string of this target. It works by calling
+     * `Extract.canvas` and then running toDataURL on that.
+     * @param options - The options for creating the image, or the target to extract
+     */
     async base64(options) {
       options = this._normalizeOptions(
         options,
@@ -36017,6 +37859,11 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       throw new Error("Extract.base64() requires ICanvas.toDataURL, ICanvas.toBlob, or ICanvas.convertToBlob to be implemented");
     }
+    /**
+     * Creates a Canvas element, renders this target to it and then returns it.
+     * @param options - The options for creating the canvas, or the target to extract
+     * @returns - A Canvas element with the texture rendered on.
+     */
     canvas(options) {
       options = this._normalizeOptions(options);
       const target = options.target;
@@ -36029,6 +37876,12 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       texture.destroy();
       return canvas;
     }
+    /**
+     * Will return a one-dimensional array containing the pixel data of the entire texture in RGBA
+     * order, with integer values between 0 and 255 (included).
+     * @param options - The options for extracting the image, or the target to extract
+     * @returns - One-dimensional array containing the pixel data of the entire texture
+     */
     pixels(options) {
       options = this._normalizeOptions(options);
       const target = options.target;
@@ -36040,12 +37893,21 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       return pixelInfo;
     }
+    /**
+     * Will return a texture of the target
+     * @param options - The options for creating the texture, or the target to extract
+     * @returns - A texture of the target
+     */
     texture(options) {
       options = this._normalizeOptions(options);
       if (options.target instanceof Texture)
         return options.target;
       return this._renderer.textureGenerator.generateTexture(options);
     }
+    /**
+     * Will extract a HTMLImage of the target and download it
+     * @param options - The options for downloading and extracting the image, or the target to extract
+     */
     download(options) {
       var _a;
       options = this._normalizeOptions(options);
@@ -36057,6 +37919,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       link.click();
       document.body.removeChild(link);
     }
+    /**
+     * Logs the target to the console as an image. This is a useful way to debug what's happening in the renderer.
+     * @param options - The options for logging the image, or the target to log
+     */
     log(options) {
       var _a;
       const width = (_a = options.width) != null ? _a : 200;
@@ -36084,8 +37950,11 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     ],
     name: "extract"
   };
+  /** Default options for creating an image. */
   _ExtractSystem.defaultImageOptions = {
+    /** The format of the image. */
     format: "png",
+    /** The quality of the image. */
     quality: 1
   };
   let ExtractSystem = _ExtractSystem;
@@ -36097,6 +37966,13 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
         source: new TextureSource(options)
       });
     }
+    /**
+     * Resizes the render texture.
+     * @param width - The new width of the render texture.
+     * @param height - The new height of the render texture.
+     * @param resolution - The new resolution of the render texture.
+     * @returns This texture.
+     */
     resize(width, height, resolution) {
       this.source.resize(width, height, resolution);
       return this;
@@ -36309,7 +38185,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
 
   "use strict";
   let saidHello = false;
-  const VERSION = "8.0.0-rc.11";
+  const VERSION = "8.0.0";
   function sayHello(type) {
     if (saidHello) {
       return;
@@ -36441,9 +38317,22 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     ],
     name: "textureGC"
   };
+  /** default options for the TextureGCSystem */
   _TextureGCSystem.defaultOptions = {
+    /**
+     * If set to true, this will enable the garbage collector on the GPU.
+     * @default true
+     */
     textureGCActive: true,
+    /**
+     * The maximum idle frames before a texture is destroyed by garbage collection.
+     * @default 60 * 60
+     */
     textureGCAMaxIdle: 60 * 60,
+    /**
+     * Frames between two garbage collections.
+     * @default 600
+     */
     textureGCCheckCountMax: 600
   };
   let TextureGCSystem = _TextureGCSystem;
@@ -36467,6 +38356,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     return a;
   };
   const _ViewSystem = class _ViewSystem {
+    /** The resolution / device pixel ratio of the renderer. */
     get resolution() {
       return this.texture.source._resolution;
     }
@@ -36541,7 +38431,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     name: "view",
     priority: 0
   };
-  /** @ignore */
+  /** The default options for the view system. */
   _ViewSystem.defaultOptions = {
     /**
      * {@link WebGLOptions.width}
@@ -36951,6 +38841,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     ],
     name: "device"
   };
+  /** The default options for the GpuDeviceSystem. */
   GpuDeviceSystem.defaultOptions = {
     /**
      * {@link WebGPUOptions.powerPreference}
@@ -37652,7 +39543,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._renderer = renderer;
       this._renderTargetSystem = renderTargetSystem;
     }
-    copyToTexture(sourceRenderSurfaceTexture, destinationTexture, origin, size) {
+    copyToTexture(sourceRenderSurfaceTexture, destinationTexture, originSrc, size, originDest) {
       const renderer = this._renderer;
       const baseGpuTexture = this._getGpuColorTexture(
         sourceRenderSurfaceTexture
@@ -37663,10 +39554,11 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       renderer.encoder.commandEncoder.copyTextureToTexture(
         {
           texture: baseGpuTexture,
-          origin
+          origin: originSrc
         },
         {
-          texture: backGpuTexture
+          texture: backGpuTexture,
+          origin: originDest
         },
         size
       );
@@ -38022,6 +39914,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     contextChange(gpu) {
       this.gpu = gpu;
     }
+    /**
+     * Gets the blend mode data for the current state
+     * @param state - The state to get the blend mode from
+     */
     getColorTargets(state) {
       const blend = GpuBlendModesToPixi[state.blendMode] || GpuBlendModesToPixi.normal;
       return [
@@ -38858,6 +40754,9 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
     return target;
   };
   class RenderContainer extends Container {
+    /**
+     * @param options - The options for the container.
+     */
     constructor(options) {
       var _b, _c;
       if (typeof options === "function") {
@@ -38868,6 +40767,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
         label: "RenderContainer"
       }, rest));
       this.batched = false;
+      /**
+       * The local bounds of the sprite.
+       * @type {rendering.Bounds}
+       */
       this.bounds = new Bounds();
       this.canBundle = false;
       this.renderPipeId = "customRender";
@@ -38876,6 +40779,10 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this.containsPoint = (_b = options.containsPoint) != null ? _b : () => false;
       this.addBounds = (_c = options.addBounds) != null ? _c : () => false;
     }
+    /**
+     * An overrideable function that can be used to render the object using the current renderer.
+     * @param _renderer - The current renderer
+     */
     render(_renderer) {
     }
   }
@@ -39062,9 +40969,17 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       value.on("update", this.textureUpdated, this);
       this.textureUpdated();
     }
+    /** The texture of the MeshPlane */
     get texture() {
       return this._texture;
     }
+    /**
+     * Destroys this sprite renderable and optionally its texture.
+     * @param options - Options parameter. A boolean will act as if all options
+     *  have been set to that value
+     * @param {boolean} [options.texture=false] - Should it destroy the current texture of the renderable as well
+     * @param {boolean} [options.textureSource=false] - Should it destroy the textureSource of the renderable as well
+     */
     destroy(options) {
       this.texture.off("update", this.textureUpdated, this);
       super.destroy(options);
@@ -39212,6 +41127,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       this.buffers[0].update();
     }
+    /** Refreshes Rope indices and uvs */
     update() {
       if (this.textureScale > 0) {
         this._build();
@@ -39220,9 +41136,13 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
     }
   };
+  /** Default options for RopeGeometry constructor. */
   _RopeGeometry.defaultOptions = {
+    /** The width (i.e., thickness) of the rope. */
     width: 200,
+    /** An array of points that determine the rope. */
     points: [],
+    /** Rope texture scale, if zero then the rope texture is stretched. */
     textureScale: 0
   };
   let RopeGeometry = _RopeGeometry;
@@ -39402,14 +41322,14 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   class NineSliceSprite extends Container {
     /**
      * @param {scene.NineSliceSpriteOptions|Texture} options - Options to use
-     * @param options.texture - The texture to use on the NineSlicePlane.
+     * @param options.texture - The texture to use on the NineSliceSprite.
      * @param options.leftWidth - Width of the left vertical bar (A)
      * @param options.topHeight - Height of the top horizontal bar (C)
      * @param options.rightWidth - Width of the right vertical bar (B)
      * @param options.bottomHeight - Height of the bottom horizontal bar (D)
-     * @param options.width - Width of the NineSlicePlane,
+     * @param options.width - Width of the NineSliceSprite,
      * setting this will actually modify the vertices and not the UV's of this plane.
-     * @param options.height - Height of the NineSlicePlane,
+     * @param options.height - Height of the NineSliceSprite,
      * setting this will actually modify the vertices and not UV's of this plane.
      */
     constructor(options) {
@@ -39453,7 +41373,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._texture = texture;
       this.roundPixels = roundPixels != null ? roundPixels : false;
     }
-    /** The width of the NineSlicePlane, setting this will actually modify the vertices and UV's of this plane. */
+    /** The width of the NineSliceSprite, setting this will actually modify the vertices and UV's of this plane. */
     get width() {
       return this._width;
     }
@@ -39461,7 +41381,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this.bounds.maxX = this._width = value;
       this.onViewUpdate();
     }
-    /** The height of the NineSlicePlane, setting this will actually modify the vertices and UV's of this plane. */
+    /** The height of the NineSliceSprite, setting this will actually modify the vertices and UV's of this plane. */
     get height() {
       return this._height;
     }
@@ -39469,7 +41389,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this.bounds.maxY = this._height = value;
       this.onViewUpdate();
     }
-    /** The width of the left column (a) of the NineSlicePlane. */
+    /** The width of the left column (a) of the NineSliceSprite. */
     get leftWidth() {
       return this._leftWidth;
     }
@@ -39477,7 +41397,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._leftWidth = value;
       this.onViewUpdate();
     }
-    /** The width of the right column (b) of the NineSlicePlane. */
+    /** The width of the right column (b) of the NineSliceSprite. */
     get topHeight() {
       return this._topHeight;
     }
@@ -39485,7 +41405,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._topHeight = value;
       this.onViewUpdate();
     }
-    /** The width of the right column (b) of the NineSlicePlane. */
+    /** The width of the right column (b) of the NineSliceSprite. */
     get rightWidth() {
       return this._rightWidth;
     }
@@ -39493,7 +41413,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._rightWidth = value;
       this.onViewUpdate();
     }
-    /** The width of the right column (b) of the NineSlicePlane. */
+    /** The width of the right column (b) of the NineSliceSprite. */
     get bottomHeight() {
       return this._bottomHeight;
     }
@@ -39501,7 +41421,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._bottomHeight = value;
       this.onViewUpdate();
     }
-    /** The texture that the NineSlicePlane is using. */
+    /** The texture that the NineSliceSprite is using. */
     get texture() {
       return this._texture;
     }
@@ -39511,25 +41431,28 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       this._texture = value;
       this.onViewUpdate();
     }
-    /** Whether or not to round the x/y position of the nine slice. */
+    /**
+     *  Whether or not to round the x/y position of the sprite.
+     * @type {boolean}
+     */
     get roundPixels() {
       return !!this._roundPixels;
     }
     set roundPixels(value) {
       this._roundPixels = value ? 1 : 0;
     }
+    /** The texture matrix of the NineSliceSprite. */
     get textureMatrix() {
       return this._texture.textureMatrix.mapCoord;
     }
+    /** The original width of the texture */
     get originalWidth() {
       return this._texture.width;
     }
+    /** The original height of the texture */
     get originalHeight() {
       return this._texture.height;
     }
-    /**
-     * @internal
-     */
     onViewUpdate() {
       this._didChangeId += 1 << 12;
       this._didSpriteUpdate = true;
@@ -39540,10 +41463,18 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
         this.renderGroup.onChildViewUpdate(this);
       }
     }
+    /**
+     * Adds the bounds of this object to the bounds object.
+     * @param bounds - The output bounds object.
+     */
     addBounds(bounds) {
       const _bounds = this.bounds;
       bounds.addFrame(_bounds.minX, _bounds.minY, _bounds.maxX, _bounds.maxY);
     }
+    /**
+     * Checks if the object contains the given point.
+     * @param point - The point to check
+     */
     containsPoint(point) {
       const bounds = this.bounds;
       if (point.x >= bounds.minX && point.x <= bounds.maxX) {
@@ -39553,6 +41484,13 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
       }
       return false;
     }
+    /**
+     * Destroys this sprite renderable and optionally its texture.
+     * @param options - Options parameter. A boolean will act as if all options
+     *  have been set to that value
+     * @param {boolean} [options.texture=false] - Should it destroy the current texture of the renderable as well
+     * @param {boolean} [options.textureSource=false] - Should it destroy the textureSource of the renderable as well
+     */
     destroy(options) {
       super.destroy(options);
       const destroyTexture = typeof options === "boolean" ? options : options == null ? void 0 : options.texture;
@@ -39777,11 +41715,13 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   exports.CullerPlugin = CullerPlugin;
   exports.CustomRenderPipe = CustomRenderPipe;
   exports.DATA_URI = DATA_URI;
+  exports.DDS = DDS;
   exports.DEG_TO_RAD = DEG_TO_RAD;
   exports.DEPRECATED_SCALE_MODES = DEPRECATED_SCALE_MODES;
   exports.DEPRECATED_WRAP_MODES = DEPRECATED_WRAP_MODES;
   exports.DOMAdapter = DOMAdapter;
   exports.DRAW_MODES = DRAW_MODES;
+  exports.DXGI_TO_TEXTURE_FORMAT = DXGI_TO_TEXTURE_FORMAT;
   exports.DisplacementFilter = DisplacementFilter;
   exports.DynamicBitmapFont = DynamicBitmapFont;
   exports.Ellipse = Ellipse;
@@ -39791,6 +41731,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   exports.EventsTicker = EventsTicker;
   exports.ExtensionType = ExtensionType;
   exports.ExtractSystem = ExtractSystem;
+  exports.FOURCC_TO_TEXTURE_FORMAT = FOURCC_TO_TEXTURE_FORMAT;
   exports.FederatedContainer = FederatedContainer;
   exports.FederatedEvent = FederatedEvent;
   exports.FederatedMouseEvent = FederatedMouseEvent;
@@ -39805,6 +41746,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   exports.FontStylePromiseCache = FontStylePromiseCache;
   exports.GAUSSIAN_VALUES = GAUSSIAN_VALUES;
   exports.GL_FORMATS = GL_FORMATS;
+  exports.GL_INTERNAL_FORMAT = GL_INTERNAL_FORMAT;
   exports.GL_TARGETS = GL_TARGETS;
   exports.GL_TYPES = GL_TYPES;
   exports.GL_WRAP_MODES = GL_WRAP_MODES;
@@ -39870,6 +41812,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   exports.IGLUniformData = IGLUniformData;
   exports.ImageSource = ImageSource;
   exports.InstructionSet = InstructionSet;
+  exports.KTX = KTX;
   exports.Loader = Loader;
   exports.LoaderParserPriority = LoaderParserPriority;
   exports.MAX_TEXTURES = MAX_TEXTURES;
@@ -39935,6 +41878,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   exports.StencilMask = StencilMask;
   exports.StencilMaskPipe = StencilMaskPipe;
   exports.SystemRunner = SystemRunner;
+  exports.TEXTURE_FORMAT_BLOCK_SIZE = TEXTURE_FORMAT_BLOCK_SIZE;
   exports.Text = Text;
   exports.TextStyle = TextStyle;
   exports.Texture = Texture;
@@ -40184,6 +42128,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   exports.loadImageBitmap = loadImageBitmap;
   exports.loadJson = loadJson;
   exports.loadKTX = loadKTX;
+  exports.loadKTX2 = loadKTX2;
   exports.loadKTX2onWorker = loadKTX2onWorker;
   exports.loadSVGImage = loadSVGImage;
   exports.loadSvg = loadSvg;
@@ -40230,6 +42175,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32>
   exports.onRenderMixin = onRenderMixin;
   exports.parseDDS = parseDDS;
   exports.parseFunctionBody = parseFunctionBody;
+  exports.parseKTX = parseKTX;
   exports.path = path;
   exports.preloadVideo = preloadVideo;
   exports.removeItems = removeItems;

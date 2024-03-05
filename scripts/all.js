@@ -99,6 +99,8 @@ SCENE.setup = async function () {
     SCENE.world.offset.y = SCENE.canvas.height * 0.5;
     SCENE.ui.offset.x = SCENE.canvas.width * 0.5;
     SCENE.ui.offset.y = SCENE.canvas.height * 0.5;
+    // set up 0,0 top left for UI
+    SCENE.ui.target = {x: 0.5 * screen.width, y: 0.5 * screen.height}
 
     SCENE.stage.addChild(SCENE.world);
     SCENE.stage.addChild(SCENE.ui);
@@ -108,6 +110,14 @@ SCENE.setup = async function () {
         SCENE.ui.tick();
         if (ENGINE.loaded.status()) { // Engine isn't actively loading something
             if (LEVEL.player.tick) LEVEL.player.tick();
+        }
+        if (SCENE.ui.fps) {
+            
+            if (!SCENE.ui.fps.smoothFPS) SCENE.ui.fps.smoothFPS = SCENE.ticker.FPS;
+            SCENE.ui.fps.smoothFPS *= 0.995;
+            SCENE.ui.fps.smoothFPS += 0.005 * SCENE.ticker.FPS;
+            SCENE.ui.fps.sprite.text = (SCENE.ui.fps.smoothFPS + 0.5) ^ 0;
+            
         }
     });
 
@@ -492,6 +502,30 @@ async function TEST_INITIALIZATION() {
         loadLevel = false;
         LEVEL.import('level/demoBox.vxf');
     }
+
+    // pre install
+    PIXI.BitmapFont.install({
+        name: 'uiBasic',
+        style: {
+            fill: 0xffffff,
+            fontFamily: 'monospace',
+        }
+    })
+
+    // new bitmap text with preinstalled font
+    const text = new PIXI.BitmapText({
+        text: '',
+        style: {
+            fontFamily: 'uiBasic',
+            fontSize: 24,
+            anchor: {x: 0, y: 1}
+        },
+        x: 0
+    });
+
+    SCENE.ui.add(SCENE.ui.fps = {
+        sprite: text
+    });
 
 };
 
