@@ -1,5 +1,5 @@
 # Acerola Jam 0
-I'm participating in Acerola's Game Jam 0! Let's hope I get this done
+I got burnt out but I submitted what I had: https://itch.io/jam/acerola-jam-0/rate/2576792
 
 # Tech
 I'm using [PixiJS V8](https://github.com/pixijs/pixijs) (Renderer) + [ZephyrJS](https://github.com/ZephyrStudio/ZephyrJS) (Engine). Want to learn more? They're both linked to their respective GitHub repos!
